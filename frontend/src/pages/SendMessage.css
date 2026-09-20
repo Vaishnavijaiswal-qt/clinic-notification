@@ -1,0 +1,139 @@
+.send-message-page {
+  width: 100%;
+}
+.send-page-header {
+  margin-bottom: 32px;
+}
+.send-page-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+.send-page-header p {
+  font-size: 14px;
+  color: #6b7280;
+}
+.message-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 28px;
+}
+.message-card-header {
+  margin-bottom: 28px;
+}
+.message-card-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 6px;
+}
+.message-card-header p {
+  font-size: 14px;
+  color: #6b7280;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 22px;
+}
+.message-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.form-row .message-form-group {
+  margin-bottom: 0;
+}
+.message-form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+.message-form-group input,
+.message-form-group select,
+.message-form-group textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  outline: none;
+}
+.message-form-group input,
+.message-form-group select {
+  height: 44px;
+  padding: 0 14px;
+}
+.message-form-group textarea {
+  min-height: 130px;
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.message-form-group input:focus,
+.message-form-group select:focus,
+.message-form-group textarea:focus {
+  border-color: #1e3a5f;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.08);
+}
+.recipient-group,
+.event-group {
+  max-width: 50%;
+}
+.channel-info {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+}
+.channel-info p {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+.form-error {
+  font-size: 13px;
+  color: #b91c1c;
+  margin-top: -8px;
+  margin-bottom: 20px;
+}
+.message-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+.clear-button,
+.send-button {
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.clear-button {
+  background-color: #ffffff;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+.clear-button:hover {
+  background-color: #f9fafb;
+}
+.send-button {
+  background-color: #1e3a5f;
+  color: #ffffff;
+  border: none;
+}
+.send-button:hover {
+  background-color: #16304f;
+}
