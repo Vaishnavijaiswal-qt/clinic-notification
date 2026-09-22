@@ -1,24 +1,46 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
-import Header from "./components/Header";
-import Settings from "./pages/Setting";
-import SendMessage from "./pages/SendMessage";
-import Templates from "./pages/Templates";
+
+import Sidebar from "./components/Sidebar";
+
+import Preferences from "./pages/Notifications/SettingsNotifications/Preferences";
+import Events from "./pages/Notifications/SettingsNotifications/Events";
+import EventMapping from "./pages/Notifications/SettingsNotifications/EventMapping";
+import Templates from "./pages/Notifications/SettingsNotifications/Templates";
 
 function App() {
   return (
     <div className="app">
-      <Header />
+      <Sidebar />
 
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/settings" replace />}/>
-          <Route path="/settings"element={<Settings />}/>
-          <Route path="/send-message" element={<SendMessage />}/>
-          <Route path="/templates" element={<Templates />} />
+          <Route
+            path="/"
+            element={<Navigate to="/settings" replace />}
+          />
+          
+          <Route
+            path="/settings/notifications/preferences"
+            element={<Preferences />}
+          />
+
+          <Route
+            path="/settings/notifications/events"
+            element={<Events />}
+          />
+
+          <Route
+            path="/settings/notifications/event-mapping"
+            element={<EventMapping />}
+          />
+
+          <Route
+            path="/settings/notifications/templates"
+            element={<Templates />}
+          />
         </Routes>
       </main>
-      
     </div>
   );
 }
