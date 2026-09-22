@@ -1,4 +1,5 @@
 import { useState } from "react";
+import NotificationTabs from "../NotificationTabs";
 
 type NotificationPreference = {
     id: number;
@@ -82,6 +83,8 @@ function Preferences() {
     return (
         <div className="page-container">
 
+            <NotificationTabs />
+
             <div className="page-header">
                 <div>
                     <h1>Notification Preferences</h1>
@@ -117,9 +120,11 @@ function Preferences() {
                             }}
                         >
                             <option value="">Select Client</option>
+
                             <option value="client-1">
                                 ABC Healthcare
                             </option>
+
                             <option value="client-2">
                                 XYZ Healthcare
                             </option>
@@ -167,6 +172,7 @@ function Preferences() {
                 <div className="section-header">
                     <div>
                         <h2>Communication Preferences</h2>
+
                         <p>
                             Control which communication channels are enabled
                             for each notification event.

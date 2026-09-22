@@ -19,7 +19,17 @@ function App() {
             path="/"
             element={<Navigate to="/settings" replace />}
           />
-          
+
+          <Route
+            path="/settings"
+            element={
+              <Navigate
+                to="/settings/notifications/preferences"
+                replace
+              />
+            }
+          />
+
           <Route
             path="/settings/notifications/preferences"
             element={<Preferences />}
