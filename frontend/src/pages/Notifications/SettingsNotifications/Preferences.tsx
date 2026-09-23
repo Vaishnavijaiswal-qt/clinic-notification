@@ -1,5 +1,4 @@
 import { useState } from "react";
-import NotificationTabs from "../NotificationTabs";
 
 type NotificationPreference = {
     id: number;
@@ -12,6 +11,7 @@ type NotificationPreference = {
 function Preferences() {
     const [selectedClient, setSelectedClient] = useState("");
     const [selectedClinic, setSelectedClinic] = useState("");
+    const [doNotDisturb, setDoNotDisturb] = useState(false);
 
     const [preferences, setPreferences] = useState<NotificationPreference[]>([
         {
@@ -70,6 +70,7 @@ function Preferences() {
             clientId: selectedClient,
             clinicId: selectedClinic,
             preferences,
+            doNotDisturb,
         });
 
         alert("Notification preferences saved successfully.");
@@ -78,13 +79,11 @@ function Preferences() {
     const handleCancel = () => {
         setSelectedClient("");
         setSelectedClinic("");
+        setDoNotDisturb(false);
     };
 
     return (
         <div className="page-container">
-
-            <NotificationTabs />
-
             <div className="page-header">
                 <div>
                     <h1>Notification Preferences</h1>
@@ -96,7 +95,6 @@ function Preferences() {
             </div>
 
             <section className="content-card">
-
                 <div className="card-header">
                     <div>
                         <h2>Configuration</h2>
@@ -108,7 +106,6 @@ function Preferences() {
                 </div>
 
                 <div className="form-grid">
-
                     <div className="form-field">
                         <label>Client</label>
 
@@ -120,14 +117,8 @@ function Preferences() {
                             }}
                         >
                             <option value="">Select Client</option>
-
-                            <option value="client-1">
-                                ABC Healthcare
-                            </option>
-
-                            <option value="client-2">
-                                XYZ Healthcare
-                            </option>
+                            <option value="client-1">ABC Healthcare</option>
+                            <option value="client-2">XYZ Healthcare</option>
                         </select>
                     </div>
 
@@ -148,7 +139,6 @@ function Preferences() {
                                     <option value="clinic-1">
                                         ABC Medical Center
                                     </option>
-
                                     <option value="clinic-2">
                                         XYZ Dental Clinic
                                     </option>
@@ -162,17 +152,13 @@ function Preferences() {
                             )}
                         </select>
                     </div>
-
                 </div>
-
             </section>
 
             <section className="content-section">
-
                 <div className="section-header">
                     <div>
                         <h2>Communication Preferences</h2>
-
                         <p>
                             Control which communication channels are enabled
                             for each notification event.
@@ -181,7 +167,6 @@ function Preferences() {
                 </div>
 
                 <div className="table-card">
-
                     <div className="table-header">
                         <div>Notification Event</div>
                         <div>WhatsApp</div>
@@ -222,9 +207,7 @@ function Preferences() {
                                 <button
                                     type="button"
                                     className={`toggle ${
-                                        preference.sms
-                                            ? "toggle-on"
-                                            : ""
+                                        preference.sms ? "toggle-on" : ""
                                     }`}
                                     onClick={() =>
                                         handleToggle(
@@ -259,13 +242,30 @@ function Preferences() {
                             </div>
                         </div>
                     ))}
-
                 </div>
+            </section>
 
+            <section className="content-card dnd-card">
+                <div className="dnd-content">
+                    <div>
+                        <h2>Do Not Disturb</h2>
+                        <p>Pause notifications during specific hours.</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        className={`toggle ${
+                            doNotDisturb ? "toggle-on" : ""
+                        }`}
+                        onClick={() => setDoNotDisturb(!doNotDisturb)}
+                        aria-label="Toggle Do Not Disturb"
+                    >
+                        <span className="toggle-circle" />
+                    </button>
+                </div>
             </section>
 
             <div className="page-actions">
-
                 <button
                     type="button"
                     className="button button-secondary"
@@ -281,9 +281,7 @@ function Preferences() {
                 >
                     Save Changes
                 </button>
-
             </div>
-
         </div>
     );
 }

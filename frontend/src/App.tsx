@@ -3,6 +3,7 @@ import "./App.css";
 
 import Sidebar from "./components/Sidebar";
 import NotificationHeader from "./pages/Notifications/NotificationHeader";
+import NotificationTabs from "./pages/Notifications/NotificationTabs";
 
 import Preferences from "./pages/Notifications/SettingsNotifications/Preferences";
 import Events from "./pages/Notifications/SettingsNotifications/Events";
@@ -16,6 +17,7 @@ function App() {
 
       <main className="main-content">
         <NotificationHeader />
+        <NotificationTabs />
 
         <Routes>
           <Route
