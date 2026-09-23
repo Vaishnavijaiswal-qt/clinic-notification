@@ -1,5 +1,4 @@
 import { useState } from "react";
-import NotificationTabs from "../NotificationTabs";
 
 type NotificationPreference = {
     id: number;
@@ -12,50 +11,19 @@ type NotificationPreference = {
 function Preferences() {
     const [selectedClient, setSelectedClient] = useState("");
     const [selectedClinic, setSelectedClinic] = useState("");
+    const [doNotDisturb, setDoNotDisturb] = useState(false);
 
     const [preferences, setPreferences] = useState<NotificationPreference[]>([
-        {
-            id: 1,
-            event: "Patient Registration",
-            whatsapp: true,
-            sms: true,
-            email: true,
-        },
-        {
-            id: 2,
-            event: "Patient Appointment",
-            whatsapp: true,
-            sms: true,
-            email: true,
-        },
-        {
-            id: 3,
-            event: "Appointment Rescheduled",
-            whatsapp: true,
-            sms: true,
-            email: true,
-        },
-        {
-            id: 4,
-            event: "Appointment Cancelled",
-            whatsapp: true,
-            sms: false,
-            email: true,
-        },
+        { id: 1, event: "Patient Registration", whatsapp: true, sms: true, email: true },
+        { id: 2, event: "Patient Appointment", whatsapp: true, sms: true, email: true },
+        { id: 3, event: "Appointment Rescheduled", whatsapp: true, sms: true, email: true },
+        { id: 4, event: "Appointment Cancelled", whatsapp: true, sms: false, email: true }
     ]);
 
-    const handleToggle = (
-        id: number,
-        channel: "whatsapp" | "sms" | "email"
-    ) => {
-        setPreferences((current) =>
-            current.map((preference) =>
-                preference.id === id
-                    ? {
-                          ...preference,
-                          [channel]: !preference[channel],
-                      }
-                    : preference
+    const handleToggle = (id: number, channel: "whatsapp" | "sms" | "email") => {
+        setPreferences(current =>
+            current.map(item =>
+                item.id === id ? { ...item, [channel]: !item[channel] } : item
             )
         );
     };
@@ -70,6 +38,7 @@ function Preferences() {
             clientId: selectedClient,
             clinicId: selectedClinic,
             preferences,
+            doNotDisturb
         });
 
         alert("Notification preferences saved successfully.");
@@ -78,110 +47,69 @@ function Preferences() {
     const handleCancel = () => {
         setSelectedClient("");
         setSelectedClinic("");
+        setDoNotDisturb(false);
     };
 
     return (
         <div className="page-container">
-
-            <NotificationTabs />
-
             <div className="page-header">
-                <div>
-                    <h1>Notification Preferences</h1>
-                    <p>
-                        Manage how notifications are delivered across your
-                        clinics.
-                    </p>
-                </div>
+                <h1>Notification Preferences</h1>
+                <p>Manage how notifications are delivered across your clinics.</p>
             </div>
 
             <section className="content-card">
-
                 <div className="card-header">
-                    <div>
-                        <h2>Configuration</h2>
-                        <p>
-                            Select the client and clinic for which you want to
-                            configure notification preferences.
-                        </p>
-                    </div>
+                    <h2>Configuration</h2>
+                    <p>Select the client and clinic for which you want to configure notification preferences.</p>
                 </div>
 
                 <div className="form-grid">
-
                     <div className="form-field">
                         <label>Client</label>
-
                         <select
                             value={selectedClient}
-                            onChange={(event) => {
-                                setSelectedClient(event.target.value);
+                            onChange={e => {
+                                setSelectedClient(e.target.value);
                                 setSelectedClinic("");
                             }}
                         >
                             <option value="">Select Client</option>
-
-                            <option value="client-1">
-                                ABC Healthcare
-                            </option>
-
-                            <option value="client-2">
-                                XYZ Healthcare
-                            </option>
+                            <option value="client-1">ABC Healthcare</option>
+                            <option value="client-2">XYZ Healthcare</option>
                         </select>
                     </div>
 
                     <div className="form-field">
                         <label>Clinic</label>
-
                         <select
                             value={selectedClinic}
-                            onChange={(event) =>
-                                setSelectedClinic(event.target.value)
-                            }
+                            onChange={e => setSelectedClinic(e.target.value)}
                             disabled={!selectedClient}
                         >
                             <option value="">Select Clinic</option>
 
                             {selectedClient === "client-1" && (
                                 <>
-                                    <option value="clinic-1">
-                                        ABC Medical Center
-                                    </option>
-
-                                    <option value="clinic-2">
-                                        XYZ Dental Clinic
-                                    </option>
+                                    <option value="clinic-1">ABC Medical Center</option>
+                                    <option value="clinic-2">XYZ Dental Clinic</option>
                                 </>
                             )}
 
                             {selectedClient === "client-2" && (
-                                <option value="clinic-3">
-                                    ABC Health Center
-                                </option>
+                                <option value="clinic-3">ABC Health Center</option>
                             )}
                         </select>
                     </div>
-
                 </div>
-
             </section>
 
             <section className="content-section">
-
                 <div className="section-header">
-                    <div>
-                        <h2>Communication Preferences</h2>
-
-                        <p>
-                            Control which communication channels are enabled
-                            for each notification event.
-                        </p>
-                    </div>
+                    <h2>Communication Preferences</h2>
+                    <p>Control which communication channels are enabled for each notification event.</p>
                 </div>
 
                 <div className="table-card">
-
                     <div className="table-header">
                         <div>Notification Event</div>
                         <div>WhatsApp</div>
@@ -189,30 +117,15 @@ function Preferences() {
                         <div>Email</div>
                     </div>
 
-                    {preferences.map((preference) => (
-                        <div
-                            className="table-row"
-                            key={preference.id}
-                        >
-                            <div className="event-title">
-                                {preference.event}
-                            </div>
+                    {preferences.map(item => (
+                        <div className="table-row" key={item.id}>
+                            <div className="event-title">{item.event}</div>
 
                             <div>
                                 <button
                                     type="button"
-                                    className={`toggle ${
-                                        preference.whatsapp
-                                            ? "toggle-on"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleToggle(
-                                            preference.id,
-                                            "whatsapp"
-                                        )
-                                    }
-                                    aria-label={`Toggle WhatsApp for ${preference.event}`}
+                                    className={`toggle ${item.whatsapp ? "toggle-on" : ""}`}
+                                    onClick={() => handleToggle(item.id, "whatsapp")}
                                 >
                                     <span className="toggle-circle" />
                                 </button>
@@ -221,18 +134,8 @@ function Preferences() {
                             <div>
                                 <button
                                     type="button"
-                                    className={`toggle ${
-                                        preference.sms
-                                            ? "toggle-on"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleToggle(
-                                            preference.id,
-                                            "sms"
-                                        )
-                                    }
-                                    aria-label={`Toggle SMS for ${preference.event}`}
+                                    className={`toggle ${item.sms ? "toggle-on" : ""}`}
+                                    onClick={() => handleToggle(item.id, "sms")}
                                 >
                                     <span className="toggle-circle" />
                                 </button>
@@ -241,49 +144,42 @@ function Preferences() {
                             <div>
                                 <button
                                     type="button"
-                                    className={`toggle ${
-                                        preference.email
-                                            ? "toggle-on"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleToggle(
-                                            preference.id,
-                                            "email"
-                                        )
-                                    }
-                                    aria-label={`Toggle Email for ${preference.event}`}
+                                    className={`toggle ${item.email ? "toggle-on" : ""}`}
+                                    onClick={() => handleToggle(item.id, "email")}
                                 >
                                     <span className="toggle-circle" />
                                 </button>
                             </div>
                         </div>
                     ))}
-
                 </div>
+            </section>
 
+            <section className="content-card dnd-card">
+                <div className="dnd-content">
+                    <div>
+                        <h2>Do Not Disturb</h2>
+                        <p>Pause notifications during specific hours.</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        className={`toggle ${doNotDisturb ? "toggle-on" : ""}`}
+                        onClick={() => setDoNotDisturb(!doNotDisturb)}
+                    >
+                        <span className="toggle-circle" />
+                    </button>
+                </div>
             </section>
 
             <div className="page-actions">
-
-                <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={handleCancel}
-                >
+                <button type="button" className="button button-secondary" onClick={handleCancel}>
                     Cancel
                 </button>
-
-                <button
-                    type="button"
-                    className="button button-primary"
-                    onClick={handleSave}
-                >
+                <button type="button" className="button button-primary" onClick={handleSave}>
                     Save Changes
                 </button>
-
             </div>
-
         </div>
     );
 }

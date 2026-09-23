@@ -351,3 +351,24 @@
     font-weight: 600;
     color: #111827;
 }
+
+/* Do Not Disturb */
+.dnd-card {
+    padding: 24px;
+}
+.dnd-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.dnd-content h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 17px;
+    font-weight: 600;
+}
+.dnd-content p {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
