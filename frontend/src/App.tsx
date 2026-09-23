@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 
 import Sidebar from "./components/Sidebar";
+import NotificationHeader from "./pages/Notifications/NotificationHeader";
 
 import Preferences from "./pages/Notifications/SettingsNotifications/Preferences";
 import Events from "./pages/Notifications/SettingsNotifications/Events";
@@ -14,6 +15,8 @@ function App() {
       <Sidebar />
 
       <main className="main-content">
+        <NotificationHeader />
+
         <Routes>
           <Route
             path="/"
