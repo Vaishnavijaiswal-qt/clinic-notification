@@ -528,7 +528,7 @@
 }
 
 .event-mapping-table {
-    grid-template-columns: 2fr 2fr 1.2fr 1.2fr;
+    grid-template-columns: 2fr 2fr 1.2fr 1.2fr 1fr;
 }
 
 .event-type-list {
@@ -730,4 +730,15 @@
     height: 15px;
     accent-color: #078acb;
     cursor: pointer;
+}
+
+/* Validations */
+.required {
+    color: #dc2626;
+}
+
+.form-error {
+    color: #dc2626;
+    font-size: 13px;
+    margin: 6px 0 0;
 }

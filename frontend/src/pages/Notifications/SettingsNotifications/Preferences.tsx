@@ -1,52 +1,90 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+    getClients,
+    getClinics,
+    savePreferences,
+} from "../../../api/preferencesApi";
 
-type NotificationPreference = {
+import type {
+    Client,
+    Clinic,
+    NotificationPreference,
+} from "../../../api/preferencesApi";
+
+type PreferenceRow = NotificationPreference & {
     id: number;
     event: string;
-    whatsapp: boolean;
-    sms: boolean;
-    email: boolean;
 };
 
 function Preferences() {
+    const [clients, setClients] = useState<Client[]>([]);
+    const [clinics, setClinics] = useState<Clinic[]>([]);
+
     const [selectedClient, setSelectedClient] = useState("");
     const [selectedClinic, setSelectedClinic] = useState("");
-    const [doNotDisturb, setDoNotDisturb] = useState(false);
 
-    const [preferences, setPreferences] = useState<NotificationPreference[]>([
-        {
-            id: 1,
-            event: "Patient Registration",
-            whatsapp: true,
-            sms: true,
-            email: true,
-        },
-        {
-            id: 2,
-            event: "Patient Appointment",
-            whatsapp: true,
-            sms: true,
-            email: true,
-        },
-        {
-            id: 3,
-            event: "Appointment Rescheduled",
-            whatsapp: true,
-            sms: true,
-            email: true,
-        },
-        {
-            id: 4,
-            event: "Appointment Cancelled",
-            whatsapp: true,
-            sms: false,
-            email: true,
-        },
-    ]);
+    const [preferences, setPreferences] = useState<PreferenceRow[]>([]);
+
+    const [doNotDisturb, setDoNotDisturb] = useState(false);
+    const [loadingClients, setLoadingClients] = useState(true);
+    const [loadingClinics, setLoadingClinics] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadClients = async () => {
+            try {
+                const data = await getClients();
+                setClients(data);
+            } catch {
+                setError("Failed to load clients.");
+            } finally {
+                setLoadingClients(false);
+            }
+        };
+
+        loadClients();
+    }, []);
+
+    const handleClientChange = async (
+        event: React.ChangeEvent<HTMLSelectElement>
+    ) => {
+        const clientId = event.target.value;
+
+        setSelectedClient(clientId);
+        setSelectedClinic("");
+        setClinics([]);
+        setPreferences([]);
+
+        if (!clientId) {
+            return;
+        }
+
+        try {
+            setError("");
+            setLoadingClinics(true);
+
+            const data = await getClinics(Number(clientId));
+            setClinics(data);
+        } catch {
+            setError("Failed to load clinics.");
+        } finally {
+            setLoadingClinics(false);
+        }
+    };
+
+    const handleClinicChange = (
+        event: React.ChangeEvent<HTMLSelectElement>
+    ) => {
+        setSelectedClinic(event.target.value);
+    };
 
     const handleToggle = (
         id: number,
-        channel: "whatsapp" | "sms" | "email"
+        channel:
+            | "whatsappEnabled"
+            | "smsEnabled"
+            | "emailEnabled"
     ) => {
         setPreferences((current) =>
             current.map((preference) =>
@@ -60,26 +98,45 @@ function Preferences() {
         );
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!selectedClient || !selectedClinic) {
-            alert("Please select a client and clinic.");
+            setError("Please select a client and clinic.");
             return;
         }
 
-        console.log({
-            clientId: selectedClient,
-            clinicId: selectedClinic,
-            preferences,
-            doNotDisturb,
-        });
+        try {
+            setSaving(true);
+            setError("");
 
-        alert("Notification preferences saved successfully.");
+            await savePreferences({
+                clinicId: Number(selectedClinic),
+                preferences: preferences.map((preference) => ({
+                    notificationEvent:
+                        preference.notificationEvent,
+                    whatsappEnabled:
+                        preference.whatsappEnabled,
+                    smsEnabled: preference.smsEnabled,
+                    emailEnabled: preference.emailEnabled,
+                })),
+            });
+
+            alert("Notification preferences saved successfully.");
+        } catch {
+            setError(
+                "Failed to save notification preferences."
+            );
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleCancel = () => {
         setSelectedClient("");
         setSelectedClinic("");
+        setClinics([]);
+        setPreferences([]);
         setDoNotDisturb(false);
+        setError("");
     };
 
     return (
@@ -111,14 +168,23 @@ function Preferences() {
 
                         <select
                             value={selectedClient}
-                            onChange={(event) => {
-                                setSelectedClient(event.target.value);
-                                setSelectedClinic("");
-                            }}
+                            onChange={handleClientChange}
+                            disabled={loadingClients}
                         >
-                            <option value="">Select Client</option>
-                            <option value="client-1">ABC Healthcare</option>
-                            <option value="client-2">XYZ Healthcare</option>
+                            <option value="">
+                                {loadingClients
+                                    ? "Loading clients..."
+                                    : "Select Client"}
+                            </option>
+
+                            {clients.map((client) => (
+                                <option
+                                    key={client.id}
+                                    value={client.id}
+                                >
+                                    {client.name}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
@@ -127,33 +193,32 @@ function Preferences() {
 
                         <select
                             value={selectedClinic}
-                            onChange={(event) =>
-                                setSelectedClinic(event.target.value)
+                            onChange={handleClinicChange}
+                            disabled={
+                                !selectedClient ||
+                                loadingClinics
                             }
-                            disabled={!selectedClient}
                         >
-                            <option value="">Select Clinic</option>
+                            <option value="">
+                                {loadingClinics
+                                    ? "Loading clinics..."
+                                    : "Select Clinic"}
+                            </option>
 
-                            {selectedClient === "client-1" && (
-                                <>
-                                    <option value="clinic-1">
-                                        ABC Medical Center
-                                    </option>
-                                    <option value="clinic-2">
-                                        XYZ Dental Clinic
-                                    </option>
-                                </>
-                            )}
-
-                            {selectedClient === "client-2" && (
-                                <option value="clinic-3">
-                                    ABC Health Center
+                            {clinics.map((clinic) => (
+                                <option
+                                    key={clinic.id}
+                                    value={clinic.id}
+                                >
+                                    {clinic.name}
                                 </option>
-                            )}
+                            ))}
                         </select>
                     </div>
                 </div>
             </section>
+
+            {error && <p>{error}</p>}
 
             <section className="content-section">
                 <div className="section-header">
@@ -174,74 +239,85 @@ function Preferences() {
                         <div>Email</div>
                     </div>
 
-                    {preferences.map((preference) => (
-                        <div
-                            className="table-row"
-                            key={preference.id}
-                        >
-                            <div className="event-title">
-                                {preference.event}
-                            </div>
-
+                    {preferences.length === 0 ? (
+                        <div className="table-row">
                             <div>
-                                <button
-                                    type="button"
-                                    className={`toggle ${
-                                        preference.whatsapp
-                                            ? "toggle-on"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleToggle(
-                                            preference.id,
-                                            "whatsapp"
-                                        )
-                                    }
-                                    aria-label={`Toggle WhatsApp for ${preference.event}`}
-                                >
-                                    <span className="toggle-circle" />
-                                </button>
-                            </div>
-
-                            <div>
-                                <button
-                                    type="button"
-                                    className={`toggle ${
-                                        preference.sms ? "toggle-on" : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleToggle(
-                                            preference.id,
-                                            "sms"
-                                        )
-                                    }
-                                    aria-label={`Toggle SMS for ${preference.event}`}
-                                >
-                                    <span className="toggle-circle" />
-                                </button>
-                            </div>
-
-                            <div>
-                                <button
-                                    type="button"
-                                    className={`toggle ${
-                                        preference.email
-                                            ? "toggle-on"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleToggle(
-                                            preference.id,
-                                            "email"
-                                        )
-                                    }
-                                    aria-label={`Toggle Email for ${preference.event}`}
-                                >
-                                    <span className="toggle-circle" />
-                                </button>
+                                Select a clinic to configure notification
+                                preferences.
                             </div>
                         </div>
-                    ))}
+                    ) : (
+                        preferences.map((preference) => (
+                            <div
+                                className="table-row"
+                                key={preference.id}
+                            >
+                                <div className="event-title">
+                                    {preference.event}
+                                </div>
+
+                                <div>
+                                    <button
+                                        type="button"
+                                        className={`toggle ${
+                                            preference.whatsappEnabled
+                                                ? "toggle-on"
+                                                : ""
+                                        }`}
+                                        onClick={() =>
+                                            handleToggle(
+                                                preference.id,
+                                                "whatsappEnabled"
+                                            )
+                                        }
+                                        aria-label={`Toggle WhatsApp for ${preference.event}`}
+                                    >
+                                        <span className="toggle-circle" />
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <button
+                                        type="button"
+                                        className={`toggle ${
+                                            preference.smsEnabled
+                                                ? "toggle-on"
+                                                : ""
+                                        }`}
+                                        onClick={() =>
+                                            handleToggle(
+                                                preference.id,
+                                                "smsEnabled"
+                                            )
+                                        }
+                                        aria-label={`Toggle SMS for ${preference.event}`}
+                                    >
+                                        <span className="toggle-circle" />
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <button
+                                        type="button"
+                                        className={`toggle ${
+                                            preference.emailEnabled
+                                                ? "toggle-on"
+                                                : ""
+                                        }`}
+                                        onClick={() =>
+                                            handleToggle(
+                                                preference.id,
+                                                "emailEnabled"
+                                            )
+                                        }
+                                        aria-label={`Toggle Email for ${preference.event}`}
+                                    >
+                                        <span className="toggle-circle" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             </section>
 
@@ -257,7 +333,9 @@ function Preferences() {
                         className={`toggle ${
                             doNotDisturb ? "toggle-on" : ""
                         }`}
-                        onClick={() => setDoNotDisturb(!doNotDisturb)}
+                        onClick={() =>
+                            setDoNotDisturb(!doNotDisturb)
+                        }
                         aria-label="Toggle Do Not Disturb"
                     >
                         <span className="toggle-circle" />
@@ -278,8 +356,9 @@ function Preferences() {
                     type="button"
                     className="button button-primary"
                     onClick={handleSave}
+                    disabled={saving || !selectedClinic}
                 >
-                    Save Changes
+                    {saving ? "Saving..." : "Save Changes"}
                 </button>
             </div>
         </div>

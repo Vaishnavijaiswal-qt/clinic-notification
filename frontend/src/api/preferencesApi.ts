@@ -34,7 +34,9 @@ export async function getClients(): Promise<Client[]> {
     return response.json();
 }
 
-export async function getClinics(clientId: number): Promise<Clinic[]> {
+export async function getClinics(
+    clientId: number
+): Promise<Clinic[]> {
     const response = await fetch(
         `${API_BASE_URL}/clinics?clientId=${clientId}`,
         {
