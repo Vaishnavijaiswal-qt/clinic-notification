@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Trash2, X, Search } from "lucide-react";
 import {
     getEvents,
     createEvent,
@@ -14,10 +14,8 @@ function Events() {
     const [loading, setLoading] = useState(true);
 
     const [showForm, setShowForm] = useState(false);
-    const [editingEvent, setEditingEvent] =
-        useState<NotificationEvent | null>(null);
-    const [deleteEventData, setDeleteEventData] =
-        useState<NotificationEvent | null>(null);
+    const [editingEvent, setEditingEvent] = useState<NotificationEvent | null>(null);
+    const [deleteEventData, setDeleteEventData] = useState<NotificationEvent | null>(null);
 
     const [eventName, setEventName] = useState("");
     const [description, setDescription] = useState("");
@@ -77,23 +75,11 @@ function Events() {
         if (!name) {
             setEventNameError("Event name is required");
         }
-
         if (!details) {
             setDescriptionError("Description is required");
         }
 
         if (!name || !details) {
-            return;
-        }
-
-        const exists = events.some(
-            (event) =>
-                event.eventName.toLowerCase() === name.toLowerCase() &&
-                event.id !== editingEvent?.id
-        );
-
-        if (exists) {
-            setEventNameError("Event already exists");
             return;
         }
 
@@ -164,6 +150,17 @@ function Events() {
                         >
                             + Add Event
                         </button>
+                    </div>
+
+                    <div className="events-toolbar">
+                        <div className="events-search">
+                            <Search size={18} />
+
+                            <input
+                                type="text"
+                                placeholder="Search events..."
+                            />
+                        </div>
                     </div>
 
                     <div className="table-card">

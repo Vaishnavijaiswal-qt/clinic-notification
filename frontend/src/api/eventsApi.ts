@@ -2,20 +2,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export type NotificationEvent = {
     id: number;
+    clinicId: number;
     eventName: string;
     description: string;
     createdAt: string;
     updatedAt: string;
-};
-
-export type CreateEventRequest = {
-    eventName: string;
-    description: string;
-};
-
-export type UpdateEventRequest = {
-    eventName: string;
-    description: string;
 };
 
 export async function getEvents(): Promise<NotificationEvent[]> {
@@ -33,8 +24,28 @@ export async function getEvents(): Promise<NotificationEvent[]> {
     return response.json();
 }
 
+export async function getNotificationEvents(
+    clinicId: number
+): Promise<NotificationEvent[]> {
+    const response = await fetch(
+        `${API_BASE_URL}/notification-events?clinicId=${clinicId}`,
+        {
+            credentials: "include",
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch notification events");
+    }
+
+    return response.json();
+}
+
 export async function createEvent(
-    data: CreateEventRequest
+    data: {
+        eventName: string;
+        description: string;
+    }
 ): Promise<NotificationEvent> {
     const response = await fetch(
         `${API_BASE_URL}/notification-events`,
@@ -57,7 +68,10 @@ export async function createEvent(
 
 export async function updateEvent(
     id: number,
-    data: UpdateEventRequest
+    data: {
+        eventName: string;
+        description: string;
+    }
 ): Promise<NotificationEvent> {
     const response = await fetch(
         `${API_BASE_URL}/notification-events/${id}`,
@@ -78,7 +92,9 @@ export async function updateEvent(
     return response.json();
 }
 
-export async function deleteEvent(id: number): Promise<void> {
+export async function deleteEvent(
+    id: number
+): Promise<void> {
     const response = await fetch(
         `${API_BASE_URL}/notification-events/${id}`,
         {
