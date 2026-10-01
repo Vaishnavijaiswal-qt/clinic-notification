@@ -14,6 +14,7 @@ function Events() {
     const [loading, setLoading] = useState(true);
 
     const [showForm, setShowForm] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
     const [editingEvent, setEditingEvent] = useState<NotificationEvent | null>(null);
     const [deleteEventData, setDeleteEventData] = useState<NotificationEvent | null>(null);
 
@@ -22,11 +23,14 @@ function Events() {
     const [eventNameError, setEventNameError] = useState("");
     const [descriptionError, setDescriptionError] = useState("");
     const [saving, setSaving] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
         const loadEvents = async () => {
             try {
-                const data = await getEvents();
+                setLoading(true);
+
+                const data = await getEvents(searchTerm);
                 setEvents(data);
             } catch {
                 setEvents([]);
@@ -34,9 +38,8 @@ function Events() {
                 setLoading(false);
             }
         };
-
         loadEvents();
-    }, []);
+    }, [searchTerm]);
 
     const openAddForm = () => {
         setEditingEvent(null);
@@ -44,6 +47,7 @@ function Events() {
         setDescription("");
         setEventNameError("");
         setDescriptionError("");
+        setErrorMessage("");
         setShowForm(true);
     };
 
@@ -53,6 +57,7 @@ function Events() {
         setDescription(event.description);
         setEventNameError("");
         setDescriptionError("");
+        setErrorMessage("");
         setShowForm(true);
     };
 
@@ -63,6 +68,7 @@ function Events() {
         setDescription("");
         setEventNameError("");
         setDescriptionError("");
+        setErrorMessage("");
     };
 
     const handleSave = async () => {
@@ -71,6 +77,7 @@ function Events() {
 
         setEventNameError("");
         setDescriptionError("");
+        setErrorMessage("");
 
         if (!name) {
             setEventNameError("Event name is required");
@@ -78,14 +85,12 @@ function Events() {
         if (!details) {
             setDescriptionError("Description is required");
         }
-
         if (!name || !details) {
             return;
         }
 
         try {
             setSaving(true);
-
             if (editingEvent) {
                 await updateEvent(editingEvent.id, {
                     eventName: name,
@@ -97,10 +102,13 @@ function Events() {
                     description: details,
                 });
             }
-
-            const data = await getEvents();
+            const data = await getEvents(searchTerm);
             setEvents(data);
             closeForm();
+        } catch (error) {
+            setErrorMessage(
+                error instanceof Error ? error.message : "Something went wrong"
+            );
         } finally {
             setSaving(false);
         }
@@ -110,15 +118,12 @@ function Events() {
         if (!deleteEventData) {
             return;
         }
-
         await deleteEvent(deleteEventData.id);
-
         setEvents((current) =>
             current.filter(
                 (event) => event.id !== deleteEventData.id
             )
         );
-
         setDeleteEventData(null);
     };
 
@@ -133,14 +138,26 @@ function Events() {
 
     return (
         <div className="page-container">
+            {errorMessage && (
+                <div className="event-error-popup">
+                    <span>{errorMessage}</span>
+
+                    <button
+                        type="button"
+                        onClick={() => setErrorMessage("")}
+                        aria-label="Close error"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+            )}
+
             {!showForm ? (
                 <>
                     <div className="page-header event-page-header">
                         <div>
                             <h1>Events</h1>
-                            <p>
-                                Manage notification events for your clinics.
-                            </p>
+                            <p>Manage notification events for your clinics.</p>
                         </div>
 
                         <button
@@ -159,8 +176,17 @@ function Events() {
                             <input
                                 type="text"
                                 placeholder="Search events..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
+                        <button
+                            type="button"
+                            className="events-reset-button"
+                            onClick={() => setSearchTerm("")}
+                        >
+                            Reset
+                        </button>
                     </div>
 
                     <div className="table-card">
@@ -234,17 +260,8 @@ function Events() {
                 <div className="content-card">
                     <div className="card-header event-form-header">
                         <div>
-                            <h2>
-                                {editingEvent
-                                    ? "Edit Event"
-                                    : "Add Event"}
-                            </h2>
-
-                            <p>
-                                {editingEvent
-                                    ? "Update the notification event details."
-                                    : "Create a new notification event."}
-                            </p>
+                            <h2>{editingEvent ? "Edit Event" : "Add Event"}</h2>
+                            <p> {editingEvent ? "Update the notification event details." : "Create a new notification event."}</p>
                         </div>
 
                         <button
@@ -259,8 +276,7 @@ function Events() {
 
                     <div className="form-grid">
                         <div className="form-field">
-                            <label>
-                                Event Name{" "}
+                            <label>Event Name{" "}
                                 <span className="required">*</span>
                             </label>
 
@@ -298,9 +314,7 @@ function Events() {
                             />
 
                             {descriptionError && (
-                                <p className="form-error">
-                                    {descriptionError}
-                                </p>
+                                <p className="form-error"> {descriptionError} </p>
                             )}
                         </div>
                     </div>
@@ -320,11 +334,7 @@ function Events() {
                             onClick={handleSave}
                             disabled={saving}
                         >
-                            {saving
-                                ? "Saving..."
-                                : editingEvent
-                                ? "Update"
-                                : "Add Event"}
+                            {saving ? "Saving..." : editingEvent ? "Update" : "Add Event"}
                         </button>
                     </div>
                 </div>
@@ -336,7 +346,6 @@ function Events() {
                         <div className="delete-confirmation-header">
                             <div>
                                 <h2>Delete Event</h2>
-
                                 <p>
                                     Are you sure you want to delete{" "}
                                     <strong>

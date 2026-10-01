@@ -34,9 +34,7 @@ export async function getClients(): Promise<Client[]> {
     return response.json();
 }
 
-export async function getClinics(
-    clientId: number
-): Promise<Clinic[]> {
+export async function getClinics(clientId: number): Promise<Clinic[]> {
     const response = await fetch(
         `${API_BASE_URL}/clinics?clientId=${clientId}`,
         {
@@ -51,9 +49,7 @@ export async function getClinics(
     return response.json();
 }
 
-export async function savePreferences(
-    data: SavePreferencesRequest
-): Promise<void> {
+export async function savePreferences(data: SavePreferencesRequest): Promise<void> {
     const response = await fetch(
         `${API_BASE_URL}/communication-preferences`,
         {

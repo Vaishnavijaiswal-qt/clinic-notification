@@ -16,37 +16,25 @@ export type EventMappingRequest = {
 };
 
 export async function getEventMappings(): Promise<EventMapping[]> {
-    const response = await fetch(`${API_BASE_URL}/event-mappings`, {
-        credentials: "include",
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to fetch event mappings");
-    }
-
-    return response.json();
-}
-
-export async function getEventMapping(
-    id: number
-): Promise<EventMapping> {
     const response = await fetch(
-        `${API_BASE_URL}/event-mappings/${id}`,
+        `${API_BASE_URL}/event-mappings`,
         {
             credentials: "include",
         }
     );
 
     if (!response.ok) {
-        throw new Error("Failed to fetch event mapping");
+        throw new Error("Failed to fetch event mappings");
     }
 
-    return response.json();
+    const data = await response.json();
+
+    return data;
 }
 
 export async function createEventMapping(
     data: EventMappingRequest
-): Promise<EventMapping> {
+): Promise<EventMapping[]> {
     const response = await fetch(
         `${API_BASE_URL}/event-mappings`,
         {

@@ -21,7 +21,7 @@ function Sidebar() {
                         `sidebar-link ${isActive ? "active" : ""}`
                     }
                 >
-                    Notification Management
+                    Notification Audit logs
                 </NavLink>
             </nav>
         </aside>

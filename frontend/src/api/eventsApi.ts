@@ -2,16 +2,21 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export type NotificationEvent = {
     id: number;
-    clinicId: number;
     eventName: string;
     description: string;
     createdAt: string;
     updatedAt: string;
 };
 
-export async function getEvents(): Promise<NotificationEvent[]> {
+export async function getEvents(
+    search?: string
+): Promise<NotificationEvent[]> {
+    const query = search?.trim()
+        ? `?search=${encodeURIComponent(search.trim())}`
+        : "";
+
     const response = await fetch(
-        `${API_BASE_URL}/notification-events`,
+        `${API_BASE_URL}/notification-events${query}`,
         {
             credentials: "include",
         }
@@ -19,23 +24,6 @@ export async function getEvents(): Promise<NotificationEvent[]> {
 
     if (!response.ok) {
         throw new Error("Failed to fetch events");
-    }
-
-    return response.json();
-}
-
-export async function getNotificationEvents(
-    clinicId: number
-): Promise<NotificationEvent[]> {
-    const response = await fetch(
-        `${API_BASE_URL}/notification-events?clinicId=${clinicId}`,
-        {
-            credentials: "include",
-        }
-    );
-
-    if (!response.ok) {
-        throw new Error("Failed to fetch notification events");
     }
 
     return response.json();
@@ -60,7 +48,19 @@ export async function createEvent(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to create event");
+        let message = "Failed to create event";
+
+        try {
+            const errorData = await response.json();
+
+            if (errorData?.message) {
+                message = errorData.message;
+            }
+        } catch {
+            message = "Failed to create event";
+        }
+
+        throw new Error(message);
     }
 
     return response.json();
@@ -86,7 +86,19 @@ export async function updateEvent(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to update event");
+        let message = "Failed to update event";
+
+        try {
+            const errorData = await response.json();
+
+            if (errorData?.message) {
+                message = errorData.message;
+            }
+        } catch {
+            message = "Failed to update event";
+        }
+
+        throw new Error(message);
     }
 
     return response.json();
@@ -104,6 +116,18 @@ export async function deleteEvent(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to delete event");
+        let message = "Failed to delete event";
+
+        try {
+            const errorData = await response.json();
+
+            if (errorData?.message) {
+                message = errorData.message;
+            }
+        } catch {
+            message = "Failed to delete event";
+        }
+
+        throw new Error(message);
     }
 }

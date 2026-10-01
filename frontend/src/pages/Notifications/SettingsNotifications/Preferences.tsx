@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     getClients,
     getClinics,
@@ -11,9 +11,14 @@ import type {
     NotificationPreference,
 } from "../../../api/preferencesApi";
 
+import { getEventMappings } from "../../../api/eventmappingApi";
+import type { EventMapping } from "../../../api/eventmappingApi";
+
+import { getEvents } from "../../../api/eventsApi";
+import type { NotificationEvent } from "../../../api/eventsApi";
+
 type PreferenceRow = NotificationPreference & {
     id: number;
-    event: string;
 };
 
 function Preferences() {
@@ -23,11 +28,15 @@ function Preferences() {
     const [selectedClient, setSelectedClient] = useState("");
     const [selectedClinic, setSelectedClinic] = useState("");
 
-    const [preferences, setPreferences] = useState<PreferenceRow[]>([]);
+    const [mappings, setMappings] = useState<EventMapping[]>([]);
+    const [events, setEvents] = useState<NotificationEvent[]>([]);
+
+    const [preferenceChanges, setPreferenceChanges] = useState<Record<number, Partial<PreferenceRow>>>({});
 
     const [doNotDisturb, setDoNotDisturb] = useState(false);
     const [loadingClients, setLoadingClients] = useState(true);
     const [loadingClinics, setLoadingClinics] = useState(false);
+    const [loadingEvents, setLoadingEvents] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
@@ -46,6 +55,102 @@ function Preferences() {
         loadClients();
     }, []);
 
+    useEffect(() => {
+        const loadEventData = async () => {
+            try {
+                setLoadingEvents(true);
+
+                const [mappingData, eventData] =
+                    await Promise.all([
+                        getEventMappings(),
+                        getEvents(),
+                    ]);
+
+                setMappings(mappingData);
+                setEvents(eventData);
+            } catch {
+                setError(
+                    "Failed to load notification events."
+                );
+            } finally {
+                setLoadingEvents(false);
+            }
+        };
+
+        loadEventData();
+    }, []);
+
+    const preferences = useMemo<PreferenceRow[]>(() => {
+        if (!selectedClient || !selectedClinic) {
+            return [];
+        }
+
+        const clientId = Number(selectedClient);
+        const clinicId = Number(selectedClinic);
+
+        const grouped = new Map<number, PreferenceRow>();
+
+        mappings
+            .filter(
+                (mapping) =>
+                    mapping.clientId === clientId &&
+                    mapping.clinicId === clinicId
+            )
+            .forEach((mapping) => {
+                const event = events.find(
+                    (item) => item.id === mapping.eventId
+                );
+
+                if (!event) {
+                    return;
+                }
+
+                if (!grouped.has(mapping.eventId)) {
+                    grouped.set(mapping.eventId, {
+                        id: mapping.eventId,
+                        notificationEvent: event.eventName,
+                        whatsappEnabled: false,
+                        smsEnabled: false,
+                        emailEnabled: false,
+                    });
+                }
+
+                const current = grouped.get(mapping.eventId)!;
+
+                if (
+                    mapping.notificationType ===
+                    "WHATSAPP"
+                ) {
+                    current.whatsappEnabled = true;
+                }
+
+                if (
+                    mapping.notificationType === "SMS"
+                ) {
+                    current.smsEnabled = true;
+                }
+
+                if (
+                    mapping.notificationType === "EMAIL"
+                ) {
+                    current.emailEnabled = true;
+                }
+            });
+
+        return Array.from(grouped.values()).map(
+            (preference) => ({
+                ...preference,
+                ...preferenceChanges[preference.id],
+            })
+        );
+    }, [
+        selectedClient,
+        selectedClinic,
+        mappings,
+        events,
+        preferenceChanges,
+    ]);
+
     const handleClientChange = async (
         event: React.ChangeEvent<HTMLSelectElement>
     ) => {
@@ -54,17 +159,20 @@ function Preferences() {
         setSelectedClient(clientId);
         setSelectedClinic("");
         setClinics([]);
-        setPreferences([]);
+        setPreferenceChanges({});
+        setError("");
 
         if (!clientId) {
             return;
         }
 
         try {
-            setError("");
             setLoadingClinics(true);
 
-            const data = await getClinics(Number(clientId));
+            const data = await getClinics(
+                Number(clientId)
+            );
+
             setClinics(data);
         } catch {
             setError("Failed to load clinics.");
@@ -77,6 +185,8 @@ function Preferences() {
         event: React.ChangeEvent<HTMLSelectElement>
     ) => {
         setSelectedClinic(event.target.value);
+        setPreferenceChanges({});
+        setError("");
     };
 
     const handleToggle = (
@@ -86,21 +196,31 @@ function Preferences() {
             | "smsEnabled"
             | "emailEnabled"
     ) => {
-        setPreferences((current) =>
-            current.map((preference) =>
-                preference.id === id
-                    ? {
-                          ...preference,
-                          [channel]: !preference[channel],
-                      }
-                    : preference
-            )
-        );
+        const currentPreference =
+            preferences.find(
+                (preference) =>
+                    preference.id === id
+            );
+
+        if (!currentPreference) {
+            return;
+        }
+
+        setPreferenceChanges((current) => ({
+            ...current,
+            [id]: {
+                ...current[id],
+                [channel]:
+                    !currentPreference[channel],
+            },
+        }));
     };
 
     const handleSave = async () => {
         if (!selectedClient || !selectedClinic) {
-            setError("Please select a client and clinic.");
+            setError(
+                "Please select a client and clinic."
+            );
             return;
         }
 
@@ -110,17 +230,25 @@ function Preferences() {
 
             await savePreferences({
                 clinicId: Number(selectedClinic),
-                preferences: preferences.map((preference) => ({
-                    notificationEvent:
-                        preference.notificationEvent,
-                    whatsappEnabled:
-                        preference.whatsappEnabled,
-                    smsEnabled: preference.smsEnabled,
-                    emailEnabled: preference.emailEnabled,
-                })),
+                preferences: preferences.map(
+                    (preference) => ({
+                        notificationEvent:
+                            preference.notificationEvent,
+                        whatsappEnabled:
+                            preference.whatsappEnabled,
+                        smsEnabled:
+                            preference.smsEnabled,
+                        emailEnabled:
+                            preference.emailEnabled,
+                    })
+                ),
             });
 
-            alert("Notification preferences saved successfully.");
+            setPreferenceChanges({});
+
+            alert(
+                "Notification preferences saved successfully."
+            );
         } catch {
             setError(
                 "Failed to save notification preferences."
@@ -134,7 +262,7 @@ function Preferences() {
         setSelectedClient("");
         setSelectedClinic("");
         setClinics([]);
-        setPreferences([]);
+        setPreferenceChanges({});
         setDoNotDisturb(false);
         setError("");
     };
@@ -143,10 +271,9 @@ function Preferences() {
         <div className="page-container">
             <div className="page-header">
                 <div>
-                    <h1>Notification Preferences</h1>
+                    <h1> Notification Preferences</h1>
                     <p>
-                        Manage how notifications are delivered across your
-                        clinics.
+                        Manage how notifications are delivered across your clinics.
                     </p>
                 </div>
             </div>
@@ -156,8 +283,7 @@ function Preferences() {
                     <div>
                         <h2>Configuration</h2>
                         <p>
-                            Select the client and clinic for which you want to
-                            configure notification preferences.
+                            Select the client and clinic for which you want to configure notification preferences.
                         </p>
                     </div>
                 </div>
@@ -225,8 +351,7 @@ function Preferences() {
                     <div>
                         <h2>Communication Preferences</h2>
                         <p>
-                            Control which communication channels are enabled
-                            for each notification event.
+                            Control which communication channels are enabled for each notification event.
                         </p>
                     </div>
                 </div>
@@ -239,84 +364,100 @@ function Preferences() {
                         <div>Email</div>
                     </div>
 
-                    {preferences.length === 0 ? (
+                    {!selectedClinic ? (
                         <div className="table-row">
                             <div>
-                                Select a clinic to configure notification
-                                preferences.
+                                Select a clinic to configure
+                                notification preferences.
+                            </div>
+                        </div>
+                    ) : loadingEvents ? (
+                        <div className="table-row">
+                            <div>
+                                Loading notification
+                                events...
+                            </div>
+                        </div>
+                    ) : preferences.length === 0 ? (
+                        <div className="table-row">
+                            <div>
+                                No notification events are
+                                mapped for this clinic.
                             </div>
                         </div>
                     ) : (
-                        preferences.map((preference) => (
-                            <div
-                                className="table-row"
-                                key={preference.id}
-                            >
-                                <div className="event-title">
-                                    {preference.event}
-                                </div>
+                        preferences.map(
+                            (preference) => (
+                                <div
+                                    className="table-row"
+                                    key={preference.id}
+                                >
+                                    <div className="event-title">
+                                        {preference.notificationEvent}
+                                    </div>
 
-                                <div>
-                                    <button
-                                        type="button"
-                                        className={`toggle ${
-                                            preference.whatsappEnabled
-                                                ? "toggle-on"
-                                                : ""
-                                        }`}
-                                        onClick={() =>
-                                            handleToggle(
-                                                preference.id,
-                                                "whatsappEnabled"
-                                            )
-                                        }
-                                        aria-label={`Toggle WhatsApp for ${preference.event}`}
-                                    >
-                                        <span className="toggle-circle" />
-                                    </button>
-                                </div>
+                                    <div>
+                                        <button
+                                            type="button"
+                                            className={`toggle ${
+                                                preference.whatsappEnabled
+                                                    ? "toggle-on"
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleToggle(
+                                                    preference.id,
+                                                    "whatsappEnabled"
+                                                )
+                                            }
+                                            aria-label={`Toggle WhatsApp for ${preference.notificationEvent}`}
+                                        >
+                                            <span className="toggle-circle" />
+                                        </button>
+                                    </div>
 
-                                <div>
-                                    <button
-                                        type="button"
-                                        className={`toggle ${
-                                            preference.smsEnabled
-                                                ? "toggle-on"
-                                                : ""
-                                        }`}
-                                        onClick={() =>
-                                            handleToggle(
-                                                preference.id,
-                                                "smsEnabled"
-                                            )
-                                        }
-                                        aria-label={`Toggle SMS for ${preference.event}`}
-                                    >
-                                        <span className="toggle-circle" />
-                                    </button>
-                                </div>
+                                    <div>
+                                        <button
+                                            type="button"
+                                            className={`toggle ${
+                                                preference.smsEnabled
+                                                    ? "toggle-on"
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleToggle(
+                                                    preference.id,
+                                                    "smsEnabled"
+                                                )
+                                            }
+                                            aria-label={`Toggle SMS for ${preference.notificationEvent}`}
+                                        >
+                                            <span className="toggle-circle" />
+                                        </button>
+                                    </div>
 
-                                <div>
-                                    <button
-                                        type="button"
-                                        className={`toggle ${
-                                            preference.emailEnabled
-                                                ? "toggle-on"
-                                                : ""
-                                        }`}
-                                        onClick={() =>
-                                            handleToggle(
-                                                preference.id,
-                                                "emailEnabled"
-                                            )
-                                        }
-                                        aria-label={`Toggle Email for ${preference.event}`}
-                                    >
-                                        <span className="toggle-circle" />
-                                    </button>
+                                    <div>
+                                        <button
+                                            type="button"
+                                            className={`toggle ${
+                                                preference.emailEnabled
+                                                    ? "toggle-on"
+                                                    : ""
+                                            }`}
+                                            onClick={() =>
+                                                handleToggle(
+                                                    preference.id,
+                                                    "emailEnabled"
+                                                )
+                                            }
+                                            aria-label={`Toggle Email for ${preference.notificationEvent}`}
+                                        >
+                                            <span className="toggle-circle" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            )
+                        )
                     )}
                 </div>
             </section>
@@ -325,16 +466,22 @@ function Preferences() {
                 <div className="dnd-content">
                     <div>
                         <h2>Do Not Disturb</h2>
-                        <p>Pause notifications during specific hours.</p>
+                        <p>
+                            Pause notifications during specific hours.
+                        </p>
                     </div>
 
                     <button
                         type="button"
                         className={`toggle ${
-                            doNotDisturb ? "toggle-on" : ""
+                            doNotDisturb
+                                ? "toggle-on"
+                                : ""
                         }`}
                         onClick={() =>
-                            setDoNotDisturb(!doNotDisturb)
+                            setDoNotDisturb(
+                                !doNotDisturb
+                            )
                         }
                         aria-label="Toggle Do Not Disturb"
                     >
@@ -356,7 +503,9 @@ function Preferences() {
                     type="button"
                     className="button button-primary"
                     onClick={handleSave}
-                    disabled={saving || !selectedClinic}
+                    disabled={
+                        saving || !selectedClinic
+                    }
                 >
                     {saving ? "Saving..." : "Save Changes"}
                 </button>
