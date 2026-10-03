@@ -229,19 +229,21 @@ function Preferences() {
             setError("");
 
             await savePreferences({
+                clientId: Number(selectedClient),
                 clinicId: Number(selectedClinic),
-                preferences: preferences.map(
-                    (preference) => ({
-                        notificationEvent:
-                            preference.notificationEvent,
-                        whatsappEnabled:
-                            preference.whatsappEnabled,
-                        smsEnabled:
-                            preference.smsEnabled,
-                        emailEnabled:
-                            preference.emailEnabled,
-                    })
-                ),
+                preferences: preferences.map((preference) => ({
+                    notificationEvent:
+                        preference.notificationEvent === "Patient Registration"
+                            ? "PATIENT_REGISTRATION"
+                            : preference.notificationEvent === "Patient Appointment"
+                                ? "PATIENT_APPOINTMENT"
+                                : preference.notificationEvent === "Appointment Rescheduled"
+                                    ? "APPOINTMENT_RESCHEDULED"
+                                    : "APPOINTMENT_CANCELLED",
+                    whatsappEnabled: preference.whatsappEnabled,
+                    smsEnabled: preference.smsEnabled,
+                    emailEnabled: preference.emailEnabled,
+                })),
             });
 
             setPreferenceChanges({});
@@ -272,9 +274,7 @@ function Preferences() {
             <div className="page-header">
                 <div>
                     <h1> Notification Preferences</h1>
-                    <p>
-                        Manage how notifications are delivered across your clinics.
-                    </p>
+                    <p>Manage how notifications are delivered across your clinics.</p>
                 </div>
             </div>
 
@@ -282,9 +282,7 @@ function Preferences() {
                 <div className="card-header">
                     <div>
                         <h2>Configuration</h2>
-                        <p>
-                            Select the client and clinic for which you want to configure notification preferences.
-                        </p>
+                        <p>Select the client and clinic for which you want to configure notification preferences.</p>
                     </div>
                 </div>
 
@@ -298,9 +296,7 @@ function Preferences() {
                             disabled={loadingClients}
                         >
                             <option value="">
-                                {loadingClients
-                                    ? "Loading clients..."
-                                    : "Select Client"}
+                                {loadingClients ? "Loading clients..." : "Select Client"}
                             </option>
 
                             {clients.map((client) => (
@@ -399,11 +395,10 @@ function Preferences() {
                                     <div>
                                         <button
                                             type="button"
-                                            className={`toggle ${
-                                                preference.whatsappEnabled
+                                            className={`toggle ${preference.whatsappEnabled
                                                     ? "toggle-on"
                                                     : ""
-                                            }`}
+                                                }`}
                                             onClick={() =>
                                                 handleToggle(
                                                     preference.id,
@@ -419,11 +414,10 @@ function Preferences() {
                                     <div>
                                         <button
                                             type="button"
-                                            className={`toggle ${
-                                                preference.smsEnabled
+                                            className={`toggle ${preference.smsEnabled
                                                     ? "toggle-on"
                                                     : ""
-                                            }`}
+                                                }`}
                                             onClick={() =>
                                                 handleToggle(
                                                     preference.id,
@@ -439,11 +433,10 @@ function Preferences() {
                                     <div>
                                         <button
                                             type="button"
-                                            className={`toggle ${
-                                                preference.emailEnabled
+                                            className={`toggle ${preference.emailEnabled
                                                     ? "toggle-on"
                                                     : ""
-                                            }`}
+                                                }`}
                                             onClick={() =>
                                                 handleToggle(
                                                     preference.id,
@@ -473,11 +466,10 @@ function Preferences() {
 
                     <button
                         type="button"
-                        className={`toggle ${
-                            doNotDisturb
+                        className={`toggle ${doNotDisturb
                                 ? "toggle-on"
                                 : ""
-                        }`}
+                            }`}
                         onClick={() =>
                             setDoNotDisturb(
                                 !doNotDisturb

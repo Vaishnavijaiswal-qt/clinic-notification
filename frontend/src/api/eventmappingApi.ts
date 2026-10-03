@@ -15,9 +15,17 @@ export type EventMappingRequest = {
     notificationType: "WHATSAPP" | "SMS" | "EMAIL";
 };
 
-export async function getEventMappings(): Promise<EventMapping[]> {
+export async function getEventMappings(
+    search = ""
+): Promise<EventMapping[]> {
+    const params = new URLSearchParams();
+
+    if (search.trim()) {
+        params.append("search", search.trim());
+    }
+
     const response = await fetch(
-        `${API_BASE_URL}/event-mappings`,
+        `${API_BASE_URL}/event-mappings?${params.toString()}`,
         {
             credentials: "include",
         }
@@ -31,7 +39,6 @@ export async function getEventMappings(): Promise<EventMapping[]> {
 
     return data;
 }
-
 export async function createEventMapping(
     data: EventMappingRequest
 ): Promise<EventMapping[]> {

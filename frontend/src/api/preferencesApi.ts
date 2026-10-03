@@ -18,6 +18,7 @@ export type NotificationPreference = {
 };
 
 export type SavePreferencesRequest = {
+    clientId: number;
     clinicId: number;
     preferences: NotificationPreference[];
 };
@@ -49,9 +50,11 @@ export async function getClinics(clientId: number): Promise<Clinic[]> {
     return response.json();
 }
 
-export async function savePreferences(data: SavePreferencesRequest): Promise<void> {
+export async function savePreferences(
+    data: SavePreferencesRequest
+): Promise<void> {
     const response = await fetch(
-        `${API_BASE_URL}/communication-preferences`,
+        `${API_BASE_URL}/notification-preferences`,
         {
             method: "POST",
             headers: {
