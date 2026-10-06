@@ -8,15 +8,32 @@ export type NotificationEvent = {
     updatedAt: string;
 };
 
+export type EventPage = {
+    content: NotificationEvent[];
+    number: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    last: boolean;
+};
+
 export async function getEvents(
-    search?: string
-): Promise<NotificationEvent[]> {
-    const query = search?.trim()
-        ? `?search=${encodeURIComponent(search.trim())}`
-        : "";
+    search = "",
+    page = 0,
+    size = 10
+): Promise<EventPage> {
+    const params = new URLSearchParams();
+
+    if (search.trim()) {
+        params.set("search", search.trim());
+    }
+
+    params.set("page", String(page));
+    params.set("size", String(size));
 
     const response = await fetch(
-        `${API_BASE_URL}/notification-events${query}`,
+        `${API_BASE_URL}/notification-events?${params.toString()}`,
         {
             credentials: "include",
         }
