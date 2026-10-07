@@ -665,6 +665,8 @@
     margin: 0;
 }
 
+/* Delete Confirmation */
+
 .delete-confirmation {
     position: fixed;
     inset: 0;
@@ -706,21 +708,43 @@
 .delete-confirmation-actions {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: 12px;
     padding: 16px 20px;
     border-top: 1px solid #e2e8f0;
     background: #f8fafc;
 }
 
+/* Delete button used by both Events and Event Mapping */
+
 .button-danger {
-    background: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    height: 40px;
+    padding: 0 14px;
     border: 1px solid #dc2626;
+    border-radius: 6px;
+    box-sizing: border-box;
+    background: #dc2626;
     color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .button-danger:hover {
     background: #b91c1c;
     border-color: #b91c1c;
+}
+
+.button-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .notification-header {

@@ -16,6 +16,20 @@ export type EventMapping = {
     notificationType: NotificationType;
 };
 
+export type EventMappingPagination = {
+    page: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    last: boolean;
+};
+
+export type EventMappingPage = {
+    content: EventMapping[];
+    pagination: EventMappingPagination;
+};
+
 export type EventMappingItemRequest = {
     eventId: number;
     notificationTypes: NotificationType[];
@@ -27,58 +41,51 @@ export type EventMappingRequest = {
     mappings: EventMappingItemRequest[];
 };
 
-type EventMappingApiItem = {
-    eventId: number;
-    eventName: string | null;
-    notificationTypes: NotificationType[];
-};
-
-type EventMappingApiResponse = {
+export type UpdateEventMappingRequest = {
     clientId: number;
-    clientName: string;
     clinicId: number;
-    clinicName: string;
-    mappings: EventMappingApiItem[];
+    eventId: number;
+    notificationType: NotificationType;
 };
 
-export async function getEventMappings(): Promise<EventMapping[]> {
+export async function getEventMappings(
+    search = "",
+    page = 0,
+    size = 10
+): Promise<EventMappingPage> {
+    const params = new URLSearchParams();
+
+    if (search.trim()) {
+        params.set(
+            "search",
+            search.trim()
+        );
+    }
+
+    params.set(
+        "page",
+        String(page)
+    );
+
+    params.set(
+        "size",
+        String(size)
+    );
+
     const response = await fetch(
-        `${API_BASE_URL}/event-mappings`,
+        `${API_BASE_URL}/event-mappings?${params.toString()}`,
         {
             credentials: "include",
         }
     );
 
     if (!response.ok) {
-        throw new Error("Failed to fetch event mappings");
+        throw new Error(
+            "Failed to fetch event mappings"
+        );
     }
 
-    const data: EventMappingApiResponse[] =
-        await response.json();
-
-    return data.flatMap((clinicMapping) =>
-        clinicMapping.mappings.flatMap((mapping) =>
-            mapping.notificationTypes.map(
-                (notificationType, index) => ({
-                    id:
-                        mapping.eventId * 1000 +
-                        clinicMapping.clinicId * 10 +
-                        index,
-
-                    clientId: clinicMapping.clientId,
-                    clientName: clinicMapping.clientName,
-
-                    clinicId: clinicMapping.clinicId,
-                    clinicName: clinicMapping.clinicName,
-
-                    eventId: mapping.eventId,
-                    eventName: mapping.eventName,
-
-                    notificationType,
-                })
-            )
-        )
-    );
+    return response.json();
 }
 
 export async function createEventMapping(
@@ -89,7 +96,8 @@ export async function createEventMapping(
         {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type":
+                    "application/json",
             },
             credentials: "include",
             body: JSON.stringify(data),
@@ -97,20 +105,23 @@ export async function createEventMapping(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to create event mapping");
+        throw new Error(
+            "Failed to create event mapping"
+        );
     }
 }
 
 export async function updateEventMapping(
     id: number,
-    data: EventMappingRequest
+    data: UpdateEventMappingRequest
 ): Promise<void> {
     const response = await fetch(
         `${API_BASE_URL}/event-mappings/${id}`,
         {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type":
+                    "application/json",
             },
             credentials: "include",
             body: JSON.stringify(data),
@@ -118,7 +129,9 @@ export async function updateEventMapping(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to update event mapping");
+        throw new Error(
+            "Failed to update event mapping"
+        );
     }
 }
 
@@ -134,6 +147,8 @@ export async function deleteEventMapping(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to delete event mapping");
+        throw new Error(
+            "Failed to delete event mapping"
+        );
     }
 }

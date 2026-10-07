@@ -24,14 +24,14 @@ function Events() {
     const [totalElements, setTotalElements] = useState(0);
 
     const [showForm, setShowForm] = useState(false);
-    const [editingEvent, setEditingEvent] =
-        useState<NotificationEvent | null>(null);
+    const [editingEvent, setEditingEvent] = useState<NotificationEvent | null>(null);
 
     const [eventName, setEventName] = useState("");
     const [description, setDescription] = useState("");
 
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [deleteId, setDeleteId] = useState<number | null>(null);
 
     const loadEvents = async (
         searchValue = search,
@@ -50,10 +50,7 @@ function Events() {
             setTotalPages(data.totalPages);
             setTotalElements(data.totalElements);
         } catch (error) {
-            console.error(
-                "Failed to load events:",
-                error
-            );
+            console.error("Failed to load events:", error);
 
             setEvents([]);
             setTotalPages(0);
@@ -68,6 +65,8 @@ function Events() {
 
         const fetchEvents = async () => {
             try {
+                setLoading(true);
+
                 const data = await getEvents(
                     search,
                     currentPage,
@@ -86,10 +85,7 @@ function Events() {
                     return;
                 }
 
-                console.error(
-                    "Failed to load events:",
-                    error
-                );
+                console.error("Failed to load events:", error);
 
                 setEvents([]);
                 setTotalPages(0);
@@ -156,10 +152,8 @@ function Events() {
     };
 
     const handleSave = async () => {
-        if (
-            !eventName.trim() ||
-            !description.trim()
-        ) {
+        if (!eventName.trim() || !description.trim()) 
+        {
             return;
         }
 
@@ -190,15 +184,9 @@ function Events() {
                 currentPage
             );
         } catch (error) {
-            console.error(
-                "Failed to save event:",
-                error
-            );
+            console.error("Failed to save event:", error);
 
-            const message =
-                error instanceof Error
-                    ? error.message
-                    : "Failed to save event";
+            const message = error instanceof Error ? error.message : "Failed to save event";
 
             alert(message);
         } finally {
@@ -206,30 +194,36 @@ function Events() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this event?"
-        );
+    const handleDeleteClick = (id: number) => {
+        setDeleteId(id);
+    };
 
-        if (!confirmed) {
+    const handleCancelDelete = () => {
+        if (deletingId !== null) {
+            return;
+        }
+
+        setDeleteId(null);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteId === null) {
             return;
         }
 
         try {
-            setDeletingId(id);
+            setDeletingId(deleteId);
 
-            await deleteEvent(id);
+            await deleteEvent(deleteId);
+
+            setDeleteId(null);
 
             const shouldMoveToPreviousPage =
-                events.length === 1 &&
-                currentPage > 0;
+                events.length === 1 && currentPage > 0;
 
             if (shouldMoveToPreviousPage) {
-                setLoading(true);
-
                 setCurrentPage(
-                    (previousPage) =>
-                        previousPage - 1
+                    (previousPage) => previousPage - 1
                 );
             } else {
                 await loadEvents(
@@ -261,10 +255,7 @@ function Events() {
                     <div>
                         <h2>Events</h2>
 
-                        <p>
-                            Manage notification events used
-                            across the system.
-                        </p>
+                        <p>Manage notification events used across the system.</p>
                     </div>
 
                     <button
@@ -285,9 +276,7 @@ function Events() {
                             placeholder="Search events..."
                             value={searchInput}
                             onChange={(event) =>
-                                setSearchInput(
-                                    event.target.value
-                                )
+                                setSearchInput(event.target.value)
                             }
                             onKeyDown={(event) => {
                                 if (event.key === "Enter") {
@@ -366,9 +355,7 @@ function Events() {
                                                     type="button"
                                                     className="icon-button edit-button"
                                                     onClick={() =>
-                                                        handleEdit(
-                                                            event
-                                                        )
+                                                        handleEdit(event)
                                                     }
                                                     title="Edit"
                                                 >
@@ -381,19 +368,14 @@ function Events() {
                                                     type="button"
                                                     className="icon-button delete-button"
                                                     onClick={() =>
-                                                        handleDelete(
-                                                            event.id
-                                                        )
+                                                        handleDeleteClick(event.id)
                                                     }
                                                     disabled={
-                                                        deletingId ===
-                                                        event.id
+                                                        deletingId === event.id
                                                     }
                                                     title="Delete"
                                                 >
-                                                    <Trash2
-                                                        size={17}
-                                                    />
+                                                    <Trash2 size={17} />
                                                 </button>
                                             </div>
                                         </td>
@@ -446,9 +428,7 @@ function Events() {
                                             type="button"
                                             className={
                                                 currentPage ===
-                                                index
-                                                    ? "active"
-                                                    : ""
+                                                index ? "active" : ""
                                             }
                                             onClick={() =>
                                                 handlePageChange(
@@ -481,95 +461,127 @@ function Events() {
             </div>
 
             {showForm && (
-    <div className="event-modal-overlay">
-        <div className="event-form-container">
-            <div className="event-form-header">
-                <div>
-                    <span className="event-form-label">
-                        {editingEvent ? "EDIT EVENT" : "NEW EVENT"}
-                    </span>
+                <div className="event-modal-overlay">
+                    <div className="event-form-container">
+                        <div className="event-form-header">
+                            <div>
+                                <span className="event-form-label">
+                                    {editingEvent ? "EDIT EVENT" : "NEW EVENT"}
+                                </span>
 
-                    <h3>
-                        {editingEvent
-                            ? "Edit Notification Event"
-                            : "Add Notification Event"}
-                    </h3>
+                                <h3>
+                                    {editingEvent ? "Edit Notification Event" : "Add Notification Event"}
+                                </h3>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="close-button"
+                                onClick={handleCloseForm}
+                                disabled={saving}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="event-form">
+                            <div className="form-group">
+                                <label htmlFor="eventName"> Event Name </label>
+
+                                <input
+                                    id="eventName"
+                                    type="text"
+                                    value={eventName}
+                                    onChange={(event) =>
+                                        setEventName(event.target.value)
+                                    }
+                                    placeholder="Enter event name"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="description">Description</label>
+
+                                <textarea
+                                    id="description"
+                                    value={description}
+                                    onChange={(event) =>
+                                        setDescription(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="Enter event description"
+                                    rows={4}
+                                />
+                            </div>
+
+                            <div className="form-actions">
+                                <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={handleCloseForm}
+                                    disabled={saving}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="primary-button"
+                                    onClick={handleSave}
+                                    disabled={
+                                        saving ||
+                                        !eventName.trim() ||
+                                        !description.trim()
+                                    }
+                                >
+                                    {saving
+                                        ? "Saving..."
+                                        : editingEvent
+                                          ? "Update Event"
+                                          : "Add Event"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            )}
 
-                <button
-                    type="button"
-                    className="close-button"
-                    onClick={handleCloseForm}
-                    disabled={saving}
-                >
-                    ×
-                </button>
-            </div>
+            {deleteId !== null && (
+                <div className="delete-confirmation">
+                    <div className="delete-confirmation-card">
+                        <div className="delete-confirmation-header">
+                            <h2>Delete Notification Event?</h2>
 
-            <div className="event-form">
-                <div className="form-group">
-                    <label htmlFor="eventName">
-                        Event Name
-                    </label>
+                            <p>Are you sure you want to delete this notification event?</p>
+                        </div>
 
-                    <input
-                        id="eventName"
-                        type="text"
-                        value={eventName}
-                        onChange={(event) =>
-                            setEventName(event.target.value)
-                        }
-                        placeholder="Enter event name"
-                    />
+                        <div className="delete-confirmation-actions">
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={handleCancelDelete}
+                                disabled={
+                                    deletingId !== null
+                                }
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="button-danger"
+                                onClick={confirmDelete}
+                                disabled={
+                                    deletingId !== null
+                                }
+                            >
+                                {deletingId !== null ? "Deleting..." : "Delete"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
-
-                <div className="form-group">
-                    <label htmlFor="description">
-                        Description
-                    </label>
-
-                    <textarea
-                        id="description"
-                        value={description}
-                        onChange={(event) =>
-                            setDescription(event.target.value)
-                        }
-                        placeholder="Enter event description"
-                        rows={4}
-                    />
-                </div>
-
-                <div className="form-actions">
-                    <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={handleCloseForm}
-                        disabled={saving}
-                    >
-                        Cancel
-                    </button>
-
-                    <button
-                        type="button"
-                        className="primary-button"
-                        onClick={handleSave}
-                        disabled={
-                            saving ||
-                            !eventName.trim() ||
-                            !description.trim()
-                        }
-                    >
-                        {saving
-                            ? "Saving..."
-                            : editingEvent
-                              ? "Update Event"
-                              : "Add Event"}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-)}
+            )}
         </>
     );
 }
