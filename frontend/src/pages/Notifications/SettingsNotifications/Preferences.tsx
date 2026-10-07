@@ -31,7 +31,8 @@ function Preferences() {
     const [mappings, setMappings] = useState<EventMapping[]>([]);
     const [events, setEvents] = useState<NotificationEvent[]>([]);
 
-    const [preferenceChanges, setPreferenceChanges] = useState<Record<number, Partial<PreferenceRow>>>({});
+    const [preferenceChanges, setPreferenceChanges] =
+        useState<Record<number, Partial<PreferenceRow>>>({});
 
     const [doNotDisturb, setDoNotDisturb] = useState(false);
     const [loadingClients, setLoadingClients] = useState(true);
@@ -45,7 +46,12 @@ function Preferences() {
             try {
                 const data = await getClients();
                 setClients(data);
-            } catch {
+            } catch (error) {
+                console.error(
+                    "Failed to load clients:",
+                    error
+                );
+
                 setError("Failed to load clients.");
             } finally {
                 setLoadingClients(false);
@@ -60,15 +66,20 @@ function Preferences() {
             try {
                 setLoadingEvents(true);
 
-                const [mappingData, eventData] =
+                const [mappingData, eventResponse] =
                     await Promise.all([
                         getEventMappings(),
-                        getEvents(),
+                        getEvents("", 0, 1000),
                     ]);
 
                 setMappings(mappingData);
-                setEvents(eventData);
-            } catch {
+                setEvents(eventResponse.content);
+            } catch (error) {
+                console.error(
+                    "Failed to load notification events:",
+                    error
+                );
+
                 setError(
                     "Failed to load notification events."
                 );
@@ -174,7 +185,12 @@ function Preferences() {
             );
 
             setClinics(data);
-        } catch {
+        } catch (error) {
+            console.error(
+                "Failed to load clinics:",
+                error
+            );
+
             setError("Failed to load clinics.");
         } finally {
             setLoadingClinics(false);
@@ -231,19 +247,31 @@ function Preferences() {
             await savePreferences({
                 clientId: Number(selectedClient),
                 clinicId: Number(selectedClinic),
-                preferences: preferences.map((preference) => ({
-                    notificationEvent:
-                        preference.notificationEvent === "Patient Registration"
-                            ? "PATIENT_REGISTRATION"
-                            : preference.notificationEvent === "Patient Appointment"
-                                ? "PATIENT_APPOINTMENT"
-                                : preference.notificationEvent === "Appointment Rescheduled"
-                                    ? "APPOINTMENT_RESCHEDULED"
-                                    : "APPOINTMENT_CANCELLED",
-                    whatsappEnabled: preference.whatsappEnabled,
-                    smsEnabled: preference.smsEnabled,
-                    emailEnabled: preference.emailEnabled,
-                })),
+
+                preferences: preferences.map(
+                    (preference) => ({
+                        notificationEvent:
+                            preference.notificationEvent ===
+                            "Patient Registration"
+                                ? "PATIENT_REGISTRATION"
+                                : preference.notificationEvent ===
+                                    "Patient Appointment"
+                                    ? "PATIENT_APPOINTMENT"
+                                    : preference.notificationEvent ===
+                                        "Appointment Rescheduled"
+                                        ? "APPOINTMENT_RESCHEDULED"
+                                        : "APPOINTMENT_CANCELLED",
+
+                        whatsappEnabled:
+                            preference.whatsappEnabled,
+
+                        smsEnabled:
+                            preference.smsEnabled,
+
+                        emailEnabled:
+                            preference.emailEnabled,
+                    })
+                ),
             });
 
             setPreferenceChanges({});
@@ -251,7 +279,12 @@ function Preferences() {
             alert(
                 "Notification preferences saved successfully."
             );
-        } catch {
+        } catch (error) {
+            console.error(
+                "Failed to save notification preferences:",
+                error
+            );
+
             setError(
                 "Failed to save notification preferences."
             );
@@ -273,8 +306,12 @@ function Preferences() {
         <div className="page-container">
             <div className="page-header">
                 <div>
-                    <h1> Notification Preferences</h1>
-                    <p>Manage how notifications are delivered across your clinics.</p>
+                    <h1>Notification Preferences</h1>
+
+                    <p>
+                        Manage how notifications are
+                        delivered across your clinics.
+                    </p>
                 </div>
             </div>
 
@@ -282,7 +319,12 @@ function Preferences() {
                 <div className="card-header">
                     <div>
                         <h2>Configuration</h2>
-                        <p>Select the client and clinic for which you want to configure notification preferences.</p>
+
+                        <p>
+                            Select the client and clinic
+                            for which you want to configure
+                            notification preferences.
+                        </p>
                     </div>
                 </div>
 
@@ -296,7 +338,9 @@ function Preferences() {
                             disabled={loadingClients}
                         >
                             <option value="">
-                                {loadingClients ? "Loading clients..." : "Select Client"}
+                                {loadingClients
+                                    ? "Loading clients..."
+                                    : "Select Client"}
                             </option>
 
                             {clients.map((client) => (
@@ -346,8 +390,11 @@ function Preferences() {
                 <div className="section-header">
                     <div>
                         <h2>Communication Preferences</h2>
+
                         <p>
-                            Control which communication channels are enabled for each notification event.
+                            Control which communication
+                            channels are enabled for each
+                            notification event.
                         </p>
                     </div>
                 </div>
@@ -389,16 +436,19 @@ function Preferences() {
                                     key={preference.id}
                                 >
                                     <div className="event-title">
-                                        {preference.notificationEvent}
+                                        {
+                                            preference.notificationEvent
+                                        }
                                     </div>
 
                                     <div>
                                         <button
                                             type="button"
-                                            className={`toggle ${preference.whatsappEnabled
+                                            className={`toggle ${
+                                                preference.whatsappEnabled
                                                     ? "toggle-on"
                                                     : ""
-                                                }`}
+                                            }`}
                                             onClick={() =>
                                                 handleToggle(
                                                     preference.id,
@@ -414,10 +464,11 @@ function Preferences() {
                                     <div>
                                         <button
                                             type="button"
-                                            className={`toggle ${preference.smsEnabled
+                                            className={`toggle ${
+                                                preference.smsEnabled
                                                     ? "toggle-on"
                                                     : ""
-                                                }`}
+                                            }`}
                                             onClick={() =>
                                                 handleToggle(
                                                     preference.id,
@@ -433,10 +484,11 @@ function Preferences() {
                                     <div>
                                         <button
                                             type="button"
-                                            className={`toggle ${preference.emailEnabled
+                                            className={`toggle ${
+                                                preference.emailEnabled
                                                     ? "toggle-on"
                                                     : ""
-                                                }`}
+                                            }`}
                                             onClick={() =>
                                                 handleToggle(
                                                     preference.id,
@@ -459,17 +511,20 @@ function Preferences() {
                 <div className="dnd-content">
                     <div>
                         <h2>Do Not Disturb</h2>
+
                         <p>
-                            Pause notifications during specific hours.
+                            Pause notifications during
+                            specific hours.
                         </p>
                     </div>
 
                     <button
                         type="button"
-                        className={`toggle ${doNotDisturb
+                        className={`toggle ${
+                            doNotDisturb
                                 ? "toggle-on"
                                 : ""
-                            }`}
+                        }`}
                         onClick={() =>
                             setDoNotDisturb(
                                 !doNotDisturb
@@ -499,7 +554,9 @@ function Preferences() {
                         saving || !selectedClinic
                     }
                 >
-                    {saving ? "Saving..." : "Save Changes"}
+                    {saving
+                        ? "Saving..."
+                        : "Save Changes"}
                 </button>
             </div>
         </div>

@@ -258,42 +258,49 @@ function Events() {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    className="primary-button"
-                    onClick={handleAdd}
-                >
-                    Add Event
-                </button>
+                {!showForm && (
+                    <button
+                        type="button"
+                        className="primary-button"
+                        onClick={handleAdd}
+                    >
+                        + Add Event
+                    </button>
+                )}
             </div>
 
-<div className="search-section">
-    <div className="search-box">
-        <Search size={18} />
+            {!showForm && (
+                <div className="search-section">
+                    <div className="search-box">
+                        <Search size={18} />
 
-        <input
-            type="text"
-            placeholder="Search events..."
-            value={searchInput}
-            onChange={(event) =>
-                setSearchInput(event.target.value)
-            }
-            onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                    handleSearch();
-                }
-            }}
-        />
-    </div>
+                        <input
+                            type="text"
+                            placeholder="Search events..."
+                            value={searchInput}
+                            onChange={(event) =>
+                                setSearchInput(
+                                    event.target.value
+                                )
+                            }
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                    handleSearch();
+                                }
+                            }}
+                        />
+                    </div>
 
-    <button
-        type="button"
-        className="secondary-button"
-        onClick={handleReset}
-    >
-        Reset
-    </button>
-</div>
+                    <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={handleReset}
+                    >
+                        Reset
+                    </button>
+                </div>
+            )}
+
             {showForm && (
                 <div className="event-form-container">
                     <div className="event-form-header">
@@ -383,178 +390,182 @@ function Events() {
                 </div>
             )}
 
-            <div className="events-table-container">
-                <table className="events-table">
-                    <thead>
-                        <tr>
-                            <th>Event Name</th>
-                            <th>Description</th>
-                            <th>Created At</th>
-                            <th>Updated At</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td
-                                    colSpan={5}
-                                    className="table-message"
-                                >
-                                    Loading events...
-                                </td>
-                            </tr>
-                        ) : events.length === 0 ? (
-                            <tr>
-                                <td
-                                    colSpan={5}
-                                    className="table-message"
-                                >
-                                    No events found.
-                                </td>
-                            </tr>
-                        ) : (
-                            events.map((event) => (
-                                <tr key={event.id}>
-                                    <td>
-                                        {event.eventName}
-                                    </td>
-
-                                    <td>
-                                        {event.description}
-                                    </td>
-
-                                    <td>
-                                        {new Date(
-                                            event.createdAt
-                                        ).toLocaleString()}
-                                    </td>
-
-                                    <td>
-                                        {new Date(
-                                            event.updatedAt
-                                        ).toLocaleString()}
-                                    </td>
-
-                                    <td>
-                                        <div className="action-buttons">
-                                            <button
-                                                type="button"
-                                                className="icon-button edit-button"
-                                                onClick={() =>
-                                                    handleEdit(
-                                                        event
-                                                    )
-                                                }
-                                                title="Edit"
-                                            >
-                                                <Pencil
-                                                    size={17}
-                                                />
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="icon-button delete-button"
-                                                onClick={() =>
-                                                    handleDelete(
-                                                        event.id
-                                                    )
-                                                }
-                                                disabled={
-                                                    deletingId ===
-                                                    event.id
-                                                }
-                                                title="Delete"
-                                            >
-                                                <Trash2
-                                                    size={17}
-                                                />
-                                            </button>
-                                        </div>
-                                    </td>
+            {!showForm && (
+                <>
+                    <div className="events-table-container">
+                        <table className="events-table">
+                            <thead>
+                                <tr>
+                                    <th>Event Name</th>
+                                    <th>Description</th>
+                                    <th>Created At</th>
+                                    <th>Updated At</th>
+                                    <th>Actions</th>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            </thead>
 
-            {!loading &&
-                totalElements > 0 && (
-                    <div className="pagination">
-                        <div className="pagination-info">
-                            Showing{" "}
-                            {currentPage *
-                                pageSize +
-                                1}
-                            –
-                            {Math.min(
-                                (currentPage + 1) *
-                                    pageSize,
-                                totalElements
-                            )}{" "}
-                            of {totalElements}
-                        </div>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className="table-message"
+                                        >
+                                            Loading events...
+                                        </td>
+                                    </tr>
+                                ) : events.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={5}
+                                            className="table-message"
+                                        >
+                                            No events found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    events.map((event) => (
+                                        <tr key={event.id}>
+                                            <td>
+                                                {event.eventName}
+                                            </td>
 
-                        <div className="pagination-controls">
-                            <button
-                                type="button"
-                                disabled={
-                                    currentPage === 0
-                                }
-                                onClick={() =>
-                                    handlePageChange(
-                                        currentPage - 1
-                                    )
-                                }
-                            >
-                                Previous
-                            </button>
+                                            <td>
+                                                {event.description}
+                                            </td>
 
-                            {Array.from(
-                                {
-                                    length: totalPages,
-                                },
-                                (_, index) => (
+                                            <td>
+                                                {new Date(
+                                                    event.createdAt
+                                                ).toLocaleString()}
+                                            </td>
+
+                                            <td>
+                                                {new Date(
+                                                    event.updatedAt
+                                                ).toLocaleString()}
+                                            </td>
+
+                                            <td>
+                                                <div className="action-buttons">
+                                                    <button
+                                                        type="button"
+                                                        className="icon-button edit-button"
+                                                        onClick={() =>
+                                                            handleEdit(
+                                                                event
+                                                            )
+                                                        }
+                                                        title="Edit"
+                                                    >
+                                                        <Pencil
+                                                            size={17}
+                                                        />
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        className="icon-button delete-button"
+                                                        onClick={() =>
+                                                            handleDelete(
+                                                                event.id
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            deletingId ===
+                                                            event.id
+                                                        }
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2
+                                                            size={17}
+                                                        />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {!loading &&
+                        totalElements > 0 && (
+                            <div className="pagination">
+                                <div className="pagination-info">
+                                    Showing{" "}
+                                    {currentPage *
+                                        pageSize +
+                                        1}
+                                    –
+                                    {Math.min(
+                                        (currentPage + 1) *
+                                            pageSize,
+                                        totalElements
+                                    )}{" "}
+                                    of {totalElements}
+                                </div>
+
+                                <div className="pagination-controls">
                                     <button
-                                        key={index}
                                         type="button"
-                                        className={
-                                            currentPage ===
-                                            index
-                                                ? "active"
-                                                : ""
+                                        disabled={
+                                            currentPage === 0
                                         }
                                         onClick={() =>
                                             handlePageChange(
-                                                index
+                                                currentPage - 1
                                             )
                                         }
                                     >
-                                        {index + 1}
+                                        Previous
                                     </button>
-                                )
-                            )}
 
-                            <button
-                                type="button"
-                                disabled={
-                                    currentPage ===
-                                    totalPages - 1
-                                }
-                                onClick={() =>
-                                    handlePageChange(
-                                        currentPage + 1
-                                    )
-                                }
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
-                )}
+                                    {Array.from(
+                                        {
+                                            length: totalPages,
+                                        },
+                                        (_, index) => (
+                                            <button
+                                                key={index}
+                                                type="button"
+                                                className={
+                                                    currentPage ===
+                                                    index
+                                                        ? "active"
+                                                        : ""
+                                                }
+                                                onClick={() =>
+                                                    handlePageChange(
+                                                        index
+                                                    )
+                                                }
+                                            >
+                                                {index + 1}
+                                            </button>
+                                        )
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            currentPage ===
+                                            totalPages - 1
+                                        }
+                                        onClick={() =>
+                                            handlePageChange(
+                                                currentPage + 1
+                                            )
+                                        }
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                </>
+            )}
         </div>
     );
 }

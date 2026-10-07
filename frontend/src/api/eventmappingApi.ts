@@ -1,31 +1,49 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+export type NotificationType =
+    | "WHATSAPP"
+    | "SMS"
+    | "EMAIL";
+
 export type EventMapping = {
     id: number;
     clientId: number;
+    clientName: string;
     clinicId: number;
+    clinicName: string;
     eventId: number;
-    notificationType: "WHATSAPP" | "SMS" | "EMAIL";
+    eventName: string | null;
+    notificationType: NotificationType;
+};
+
+export type EventMappingItemRequest = {
+    eventId: number;
+    notificationTypes: NotificationType[];
 };
 
 export type EventMappingRequest = {
     clientId: number;
     clinicId: number;
-    eventId: number;
-    notificationType: "WHATSAPP" | "SMS" | "EMAIL";
+    mappings: EventMappingItemRequest[];
 };
 
-export async function getEventMappings(
-    search = ""
-): Promise<EventMapping[]> {
-    const params = new URLSearchParams();
+type EventMappingApiItem = {
+    eventId: number;
+    eventName: string | null;
+    notificationTypes: NotificationType[];
+};
 
-    if (search.trim()) {
-        params.append("search", search.trim());
-    }
+type EventMappingApiResponse = {
+    clientId: number;
+    clientName: string;
+    clinicId: number;
+    clinicName: string;
+    mappings: EventMappingApiItem[];
+};
 
+export async function getEventMappings(): Promise<EventMapping[]> {
     const response = await fetch(
-        `${API_BASE_URL}/event-mappings?${params.toString()}`,
+        `${API_BASE_URL}/event-mappings`,
         {
             credentials: "include",
         }
@@ -35,13 +53,37 @@ export async function getEventMappings(
         throw new Error("Failed to fetch event mappings");
     }
 
-    const data = await response.json();
+    const data: EventMappingApiResponse[] =
+        await response.json();
 
-    return data;
+    return data.flatMap((clinicMapping) =>
+        clinicMapping.mappings.flatMap((mapping) =>
+            mapping.notificationTypes.map(
+                (notificationType, index) => ({
+                    id:
+                        mapping.eventId * 1000 +
+                        clinicMapping.clinicId * 10 +
+                        index,
+
+                    clientId: clinicMapping.clientId,
+                    clientName: clinicMapping.clientName,
+
+                    clinicId: clinicMapping.clinicId,
+                    clinicName: clinicMapping.clinicName,
+
+                    eventId: mapping.eventId,
+                    eventName: mapping.eventName,
+
+                    notificationType,
+                })
+            )
+        )
+    );
 }
+
 export async function createEventMapping(
     data: EventMappingRequest
-): Promise<EventMapping[]> {
+): Promise<void> {
     const response = await fetch(
         `${API_BASE_URL}/event-mappings`,
         {
@@ -57,14 +99,12 @@ export async function createEventMapping(
     if (!response.ok) {
         throw new Error("Failed to create event mapping");
     }
-
-    return response.json();
 }
 
 export async function updateEventMapping(
     id: number,
     data: EventMappingRequest
-): Promise<EventMapping> {
+): Promise<void> {
     const response = await fetch(
         `${API_BASE_URL}/event-mappings/${id}`,
         {
@@ -80,8 +120,6 @@ export async function updateEventMapping(
     if (!response.ok) {
         throw new Error("Failed to update event mapping");
     }
-
-    return response.json();
 }
 
 export async function deleteEventMapping(

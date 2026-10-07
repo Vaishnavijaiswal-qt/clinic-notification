@@ -24,9 +24,12 @@ export type SavePreferencesRequest = {
 };
 
 export async function getClients(): Promise<Client[]> {
-    const response = await fetch(`${API_BASE_URL}/clients`, {
-        credentials: "include",
-    });
+    const response = await fetch(
+        `${API_BASE_URL}/clients`,
+        {
+            credentials: "include",
+        }
+    );
 
     if (!response.ok) {
         throw new Error("Failed to fetch clients");
@@ -35,7 +38,9 @@ export async function getClients(): Promise<Client[]> {
     return response.json();
 }
 
-export async function getClinics(clientId: number): Promise<Clinic[]> {
+export async function getClinics(
+    clientId: number
+): Promise<Clinic[]> {
     const response = await fetch(
         `${API_BASE_URL}/clinics?clientId=${clientId}`,
         {
