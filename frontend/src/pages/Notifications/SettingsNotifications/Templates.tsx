@@ -1,126 +1,144 @@
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+
+import {
+    getTemplates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate as deleteTemplateApi,
+    type Template as ApiTemplate,
+    type NotificationType,
+} from "../../../api/templatesApi";
+
+import {
+    getEvents,
+    type NotificationEvent,
+} from "../../../api/eventsApi";
 
 type Channel = "whatsapp" | "sms" | "email";
 
-type EventTemplate = {
-    id: number;
-    eventName: string;
-    whatsapp: {
-        enabled: boolean;
-        message: string;
-    };
-    sms: {
-        enabled: boolean;
-        message: string;
-    };
-    email: {
-        enabled: boolean;
-        subject: string;
-        message: string;
-    };
+type ChannelTemplate = {
+    id: number | null;
+    enabled: boolean;
+    message: string;
 };
 
-const initialTemplates: EventTemplate[] = [
-    {
-        id: 1,
-        eventName: "Patient Registration",
-        whatsapp: {
-            enabled: true,
-            message:
-                "Hello {{patientName}}, your registration has been completed successfully.",
-        },
-        sms: {
-            enabled: true,
-            message:
-                "Hello {{patientName}}, your registration has been completed successfully.",
-        },
-        email: {
-            enabled: true,
-            subject: "Patient Registration Confirmation",
-            message:
-                "Dear {{patientName}},\n\nYour registration has been completed successfully.\n\nThank you.",
-        },
-    },
-    {
-        id: 2,
-        eventName: "Patient Appointment",
-        whatsapp: {
-            enabled: true,
-            message:
-                "Hello {{patientName}}, your appointment is scheduled for {{appointmentDate}} at {{appointmentTime}}.",
-        },
-        sms: {
-            enabled: true,
-            message:
-                "Your appointment is scheduled for {{appointmentDate}} at {{appointmentTime}}.",
-        },
-        email: {
-            enabled: true,
-            subject: "Appointment Confirmation",
-            message:
-                "Dear {{patientName}},\n\nYour appointment has been scheduled for {{appointmentDate}} at {{appointmentTime}}.\n\nThank you.",
-        },
-    },
-    {
-        id: 3,
-        eventName: "Appointment Rescheduled",
-        whatsapp: {
-            enabled: true,
-            message:
-                "Hello {{patientName}}, your appointment has been rescheduled to {{appointmentDate}} at {{appointmentTime}}.",
-        },
-        sms: {
-            enabled: true,
-            message:
-                "Your appointment has been rescheduled to {{appointmentDate}} at {{appointmentTime}}.",
-        },
-        email: {
-            enabled: true,
-            subject: "Appointment Rescheduled",
-            message:
-                "Dear {{patientName}},\n\nYour appointment has been rescheduled to {{appointmentDate}} at {{appointmentTime}}.\n\nThank you.",
-        },
-    },
-    {
-        id: 4,
-        eventName: "Appointment Cancelled",
-        whatsapp: {
-            enabled: true,
-            message:
-                "Hello {{patientName}}, your appointment on {{appointmentDate}} has been cancelled.",
-        },
-        sms: {
-            enabled: true,
-            message:
-                "Your appointment on {{appointmentDate}} has been cancelled.",
-        },
-        email: {
-            enabled: true,
-            subject: "Appointment Cancelled",
-            message:
-                "Dear {{patientName}},\n\nYour appointment on {{appointmentDate}} has been cancelled.\n\nThank you.",
-        },
-    },
-];
+type EmailTemplate = {
+    id: number | null;
+    enabled: boolean;
+    subject: string;
+    message: string;
+};
+
+type EventTemplate = {
+    notificationEvent: string;
+    whatsapp: ChannelTemplate;
+    sms: ChannelTemplate;
+    email: EmailTemplate;
+};
+
+const formatEventName = (event: string) =>
+    event
+        .toLowerCase()
+        .split("_")
+        .map(
+            (word) =>
+                word.charAt(0).toUpperCase() +
+                word.slice(1)
+        )
+        .join(" ");
+
+const normalizeEventName = (event: string) =>
+    event
+        .trim()
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .replace(/\s+/g, " ");
+
+const mapApiTemplates = (
+    apiTemplates: ApiTemplate[]
+): EventTemplate[] => {
+    const grouped = new Map<string, EventTemplate>();
+
+    apiTemplates.forEach((template) => {
+        const eventKey = normalizeEventName(
+            template.notificationEvent
+        );
+
+        if (!grouped.has(eventKey)) {
+            grouped.set(eventKey, {
+                notificationEvent:
+                    template.notificationEvent,
+
+                whatsapp: {
+                    id: null,
+                    enabled: false,
+                    message: "",
+                },
+
+                sms: {
+                    id: null,
+                    enabled: false,
+                    message: "",
+                },
+
+                email: {
+                    id: null,
+                    enabled: false,
+                    subject: "",
+                    message: "",
+                },
+            });
+        }
+
+        const eventTemplate = grouped.get(eventKey);
+
+        if (!eventTemplate) {
+            return;
+        }
+
+        if (template.notificationType === "WHATSAPP") {
+            eventTemplate.whatsapp = {
+                id: template.id,
+                enabled: true,
+                message: template.message,
+            };
+        }
+
+        if (template.notificationType === "SMS") {
+            eventTemplate.sms = {
+                id: template.id,
+                enabled: true,
+                message: template.message,
+            };
+        }
+
+        if (template.notificationType === "EMAIL") {
+            eventTemplate.email = {
+                id: template.id,
+                enabled: true,
+                subject: template.subject ?? "",
+                message: template.message,
+            };
+        }
+    });
+
+    return Array.from(grouped.values());
+};
 
 function Templates() {
-    const [templates, setTemplates] =
-        useState<EventTemplate[]>(initialTemplates);
-
-    const [selectedEventId, setSelectedEventId] = useState<number>(
-        initialTemplates[0].id
-    );
+    const [templates, setTemplates] = useState<EventTemplate[]>([]);
+    const [events, setEvents] = useState<NotificationEvent[]>([]);
+    const [selectedEventId, setSelectedEventId] =
+        useState<number | null>(null);
 
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editingChannel, setEditingChannel] =
         useState<Channel | null>(null);
 
-    const [deleteTarget, setDeleteTarget] = useState<{
-        id: number;
-        channel: Channel;
-    } | null>(null);
+    const [deleteTarget, setDeleteTarget] =
+        useState<{ channel: Channel } | null>(null);
 
     const [eventName, setEventName] = useState("");
     const [whatsappMessage, setWhatsappMessage] = useState("");
@@ -128,32 +146,93 @@ function Templates() {
     const [emailSubject, setEmailSubject] = useState("");
     const [emailMessage, setEmailMessage] = useState("");
 
-    const selectedTemplate =
-        templates.find(
-            (template) => template.id === selectedEventId
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    const selectedEvent =
+        events.find(
+            (event) => event.id === selectedEventId
         ) || null;
+
+    const selectedTemplate =
+        selectedEvent
+            ? templates.find(
+                  (template) =>
+                      normalizeEventName(
+                          template.notificationEvent
+                      ) ===
+                      normalizeEventName(
+                          selectedEvent.eventName
+                      )
+              ) || null
+            : null;
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            try {
+                const [templateData, eventData] =
+                    await Promise.all([
+                        getTemplates(),
+                        getEvents(),
+                    ]);
+
+                setTemplates(
+                    mapApiTemplates(templateData)
+                );
+
+                setEvents(eventData);
+
+                setSelectedEventId(
+                    eventData.length > 0
+                        ? eventData[0].id
+                        : null
+                );
+            } catch (error) {
+                console.error(
+                    "Failed to load notification template data:",
+                    error
+                );
+
+                setError(
+                    "Failed to load notification templates."
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void loadInitialData();
+    }, []);
+
+    const refreshTemplates = async () => {
+        const data = await getTemplates();
+
+        setTemplates(mapApiTemplates(data));
+    };
 
     const handleEventChange = (
         event: ChangeEvent<HTMLSelectElement>
     ) => {
-        setSelectedEventId(Number(event.target.value));
-    };
-
-    const handleUseTemplate = (channel: Channel) => {
-        console.log("Template selected:", {
-            event: selectedTemplate?.eventName,
-            channel,
-        });
+        setSelectedEventId(
+            Number(event.target.value)
+        );
     };
 
     const openAddForm = () => {
         setEditingId(null);
         setEditingChannel(null);
-        setEventName("");
+
+        setEventName(
+            selectedEvent?.eventName || ""
+        );
+
         setWhatsappMessage("");
         setSmsMessage("");
         setEmailSubject("");
         setEmailMessage("");
+
+        setError("");
         setShowForm(true);
     };
 
@@ -161,12 +240,32 @@ function Templates() {
         template: EventTemplate,
         channel: Channel
     ) => {
-        setEditingId(template.id);
-        setEditingChannel(channel);
-        setEventName(template.eventName);
+        let backendId: number | null = null;
 
         if (channel === "whatsapp") {
-            setWhatsappMessage(template.whatsapp.message);
+            backendId = template.whatsapp.id;
+        }
+
+        if (channel === "sms") {
+            backendId = template.sms.id;
+        }
+
+        if (channel === "email") {
+            backendId = template.email.id;
+        }
+
+        if (backendId === null) {
+            return;
+        }
+
+        setEditingId(backendId);
+        setEditingChannel(channel);
+        setEventName(template.notificationEvent);
+
+        if (channel === "whatsapp") {
+            setWhatsappMessage(
+                template.whatsapp.message
+            );
         }
 
         if (channel === "sms") {
@@ -174,133 +273,174 @@ function Templates() {
         }
 
         if (channel === "email") {
-            setEmailSubject(template.email.subject);
-            setEmailMessage(template.email.message);
+            setEmailSubject(
+                template.email.subject
+            );
+
+            setEmailMessage(
+                template.email.message
+            );
         }
 
+        setError("");
         setShowForm(true);
     };
 
-    const saveTemplate = () => {
-        if (!eventName.trim()) {
+    const saveTemplate = async () => {
+        if (!eventName) {
+            setError("Please select an event.");
             return;
         }
 
-        if (editingId !== null && editingChannel !== null) {
-            setTemplates((current) =>
-                current.map((template) => {
-                    if (template.id !== editingId) {
-                        return template;
-                    }
+        try {
+            setSaving(true);
+            setError("");
 
-                    if (editingChannel === "whatsapp") {
-                        return {
-                            ...template,
-                            whatsapp: {
-                                ...template.whatsapp,
-                                message: whatsappMessage,
-                            },
-                        };
-                    }
+            if (
+                editingId !== null &&
+                editingChannel !== null
+            ) {
+                let notificationType: NotificationType;
+                let message = "";
+                let subject: string | null = null;
 
-                    if (editingChannel === "sms") {
-                        return {
-                            ...template,
-                            sms: {
-                                ...template.sms,
-                                message: smsMessage,
-                            },
-                        };
-                    }
+                if (editingChannel === "whatsapp") {
+                    notificationType = "WHATSAPP";
+                    message = whatsappMessage;
+                } else if (editingChannel === "sms") {
+                    notificationType = "SMS";
+                    message = smsMessage;
+                } else {
+                    notificationType = "EMAIL";
+                    subject = emailSubject || null;
+                    message = emailMessage;
+                }
 
-                    return {
-                        ...template,
-                        email: {
-                            ...template.email,
-                            subject: emailSubject,
+                if (!message.trim()) {
+                    setError(
+                        "Message cannot be empty."
+                    );
+                    return;
+                }
+
+                await updateTemplate(editingId, {
+                    notificationEvent: eventName,
+                    notificationType,
+                    subject,
+                    message,
+                });
+            } else {
+                const requests: Promise<ApiTemplate>[] = [];
+
+                if (whatsappMessage.trim()) {
+                    requests.push(
+                        createTemplate({
+                            notificationEvent: eventName,
+                            notificationType: "WHATSAPP",
+                            subject: null,
+                            message: whatsappMessage,
+                        })
+                    );
+                }
+
+                if (smsMessage.trim()) {
+                    requests.push(
+                        createTemplate({
+                            notificationEvent: eventName,
+                            notificationType: "SMS",
+                            subject: null,
+                            message: smsMessage,
+                        })
+                    );
+                }
+
+                if (emailMessage.trim()) {
+                    requests.push(
+                        createTemplate({
+                            notificationEvent: eventName,
+                            notificationType: "EMAIL",
+                            subject: emailSubject || null,
                             message: emailMessage,
-                        },
-                    };
-                })
+                        })
+                    );
+                }
+
+                if (requests.length === 0) {
+                    setError(
+                        "Please enter at least one notification template."
+                    );
+                    return;
+                }
+
+                await Promise.all(requests);
+            }
+
+            await refreshTemplates();
+
+            closeForm();
+        } catch (error) {
+            console.error(
+                "Failed to save template:",
+                error
             );
 
-            setSelectedEventId(editingId);
-        } else {
-            const newTemplate: EventTemplate = {
-                id: Date.now(),
-                eventName,
-                whatsapp: {
-                    enabled: true,
-                    message: whatsappMessage,
-                },
-                sms: {
-                    enabled: true,
-                    message: smsMessage,
-                },
-                email: {
-                    enabled: true,
-                    subject: emailSubject,
-                    message: emailMessage,
-                },
-            };
-
-            setTemplates((current) => [
-                ...current,
-                newTemplate,
-            ]);
-
-            setSelectedEventId(newTemplate.id);
+            setError(
+                "Failed to save notification template."
+            );
+        } finally {
+            setSaving(false);
         }
-
-        setShowForm(false);
-        setEditingId(null);
-        setEditingChannel(null);
     };
 
-    const deleteTemplate = () => {
-        if (deleteTarget === null) {
+    const handleDeleteTemplate = async () => {
+        if (
+            deleteTarget === null ||
+            selectedTemplate === null
+        ) {
             return;
         }
 
-        const { id, channel } = deleteTarget;
+        try {
+            setSaving(true);
+            setError("");
 
-        setTemplates((current) =>
-            current.map((template) => {
-                if (template.id !== id) {
-                    return template;
-                }
+            let backendId: number | null = null;
 
-                if (channel === "whatsapp") {
-                    return {
-                        ...template,
-                        whatsapp: {
-                            ...template.whatsapp,
-                            enabled: false,
-                        },
-                    };
-                }
+            if (deleteTarget.channel === "whatsapp") {
+                backendId =
+                    selectedTemplate.whatsapp.id;
+            }
 
-                if (channel === "sms") {
-                    return {
-                        ...template,
-                        sms: {
-                            ...template.sms,
-                            enabled: false,
-                        },
-                    };
-                }
+            if (deleteTarget.channel === "sms") {
+                backendId =
+                    selectedTemplate.sms.id;
+            }
 
-                return {
-                    ...template,
-                    email: {
-                        ...template.email,
-                        enabled: false,
-                    },
-                };
-            })
-        );
+            if (deleteTarget.channel === "email") {
+                backendId =
+                    selectedTemplate.email.id;
+            }
 
-        setDeleteTarget(null);
+            if (backendId === null) {
+                return;
+            }
+
+            await deleteTemplateApi(backendId);
+            await refreshTemplates();
+
+            setDeleteTarget(null);
+        } catch (error) {
+            console.error(
+                "Failed to delete template:",
+                error
+            );
+
+            setError(
+                "Failed to delete notification template."
+            );
+        } finally {
+            setSaving(false);
+        }
     };
 
     const getChannelName = (channel: Channel) => {
@@ -315,26 +455,26 @@ function Templates() {
         return "Email";
     };
 
-    if (!selectedTemplate && !showForm) {
+    const closeForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setEditingChannel(null);
+
+        setEventName("");
+        setWhatsappMessage("");
+        setSmsMessage("");
+        setEmailSubject("");
+        setEmailMessage("");
+        setError("");
+    };
+
+    if (loading) {
         return (
             <div className="page-container">
-                <div className="page-header">
-                    <div>
-                        <h1>Notification Templates</h1>
-                        <p> Manage notification templates for different events.</p>
-                    </div>
-
-                    <button
-                        type="button"
-                        className="button button-primary"
-                        onClick={openAddForm}
-                    >
-                        + Add Template
-                    </button>
-                </div>
-
                 <div className="content-card">
-                    <p>No templates available.</p>
+                    <p>
+                        Loading notification templates...
+                    </p>
                 </div>
             </div>
         );
@@ -342,12 +482,25 @@ function Templates() {
 
     return (
         <div className="page-container">
+            {error && (
+                <div className="error-message">
+                    {error}
+                </div>
+            )}
+
             {!showForm ? (
                 <>
                     <div className="page-header">
                         <div>
-                            <h1>Notification Templates</h1>
-                            <p> Select an event and use the configured notification template.</p>
+                            <h1>
+                                Notification Templates
+                            </h1>
+
+                            <p>
+                                Configure notification
+                                templates for each event
+                                and channel.
+                            </p>
                         </div>
 
                         <button
@@ -359,253 +512,331 @@ function Templates() {
                         </button>
                     </div>
 
-                    <section className="content-card template-event-card">
-                        <div className="template-event-select">
-                            <label>Event</label>
-
-                            <select
-                                value={selectedEventId}
-                                onChange={handleEventChange}
-                            >
-                                {templates.map((template) => (
-                                    <option
-                                        key={template.id}
-                                        value={template.id}
-                                    >
-                                        {template.eventName}
-                                    </option>
-                                ))}
-                            </select>
+                    {events.length === 0 ? (
+                        <div className="content-card">
+                            <p>
+                                No events available.
+                            </p>
                         </div>
-                    </section>
-
-                    {selectedTemplate && (
+                    ) : (
                         <>
-                            <section className="template-channel-grid">
-                                {selectedTemplate.whatsapp.enabled && (
-                                    <div className="template-channel-card">
-                                        <div className="template-channel-header">
-                                            <div>
-                                                <h2>WhatsApp</h2>
-                                                <p>WhatsApp notification template</p>
-                                            </div>
+                            <section className="content-card template-event-card">
+                                <div className="template-event-select">
+                                    <label>
+                                        Event
+                                    </label>
 
-                                            <div className="template-channel-actions">
-                                                <button
-                                                    type="button"
-                                                    className="template-icon-button"
-                                                    title="Edit WhatsApp template"
-                                                    onClick={() =>
-                                                        openEditForm(
-                                                            selectedTemplate,
-                                                            "whatsapp"
-                                                        )
+                                    <select
+                                        value={
+                                            selectedEventId ??
+                                            ""
+                                        }
+                                        onChange={
+                                            handleEventChange
+                                        }
+                                    >
+                                        {events.map(
+                                            (event) => (
+                                                <option
+                                                    key={
+                                                        event.id
+                                                    }
+                                                    value={
+                                                        event.id
                                                     }
                                                 >
-                                                    <Pencil size={16} />
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className="template-icon-button"
-                                                    title="Delete WhatsApp template"
-                                                    onClick={() =>
-                                                        setDeleteTarget({
-                                                            id: selectedTemplate.id,
-                                                            channel: "whatsapp",
-                                                        })
-                                                    }
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="template-field">
-                                            <label>Message</label>
-
-                                            <textarea
-                                                value={
-                                                    selectedTemplate.whatsapp
-                                                        .message
-                                                }
-                                                readOnly
-                                                rows={6}
-                                            />
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            className="button button-primary template-use-button"
-                                            onClick={() =>
-                                                handleUseTemplate("whatsapp")
-                                            }
-                                        >
-                                            Use Template
-                                        </button>
-                                    </div>
-                                )}
-
-                                {selectedTemplate.sms.enabled && (
-                                    <div className="template-channel-card">
-                                        <div className="template-channel-header">
-                                            <div>
-                                                <h2>SMS</h2>
-                                                <p>SMS notification template</p>
-                                            </div>
-
-                                            <div className="template-channel-actions">
-                                                <button
-                                                    type="button"
-                                                    className="template-icon-button"
-                                                    title="Edit SMS template"
-                                                    onClick={() =>
-                                                        openEditForm(
-                                                            selectedTemplate,
-                                                            "sms"
-                                                        )
-                                                    }
-                                                >
-                                                    <Pencil size={16} />
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className="template-icon-button"
-                                                    title="Delete SMS template"
-                                                    onClick={() =>
-                                                        setDeleteTarget({
-                                                            id: selectedTemplate.id,
-                                                            channel: "sms",
-                                                        })
-                                                    }
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="template-field">
-                                            <label>Message</label>
-
-                                            <textarea
-                                                value={
-                                                    selectedTemplate.sms
-                                                        .message
-                                                }
-                                                readOnly
-                                                rows={6}
-                                            />
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            className="button button-primary template-use-button"
-                                            onClick={() =>
-                                                handleUseTemplate("sms")
-                                            }
-                                        >
-                                            Use Template
-                                        </button>
-                                    </div>
-                                )}
-
-                                {selectedTemplate.email.enabled && (
-                                    <div className="template-channel-card template-email-card">
-                                        <div className="template-channel-header">
-                                            <div>
-                                                <h2>Email</h2>
-                                                <p>Email notification template</p>
-                                            </div>
-
-                                            <div className="template-channel-actions">
-                                                <button
-                                                    type="button"
-                                                    className="template-icon-button"
-                                                    title="Edit Email template"
-                                                    onClick={() =>
-                                                        openEditForm(
-                                                            selectedTemplate,
-                                                            "email"
-                                                        )
-                                                    }
-                                                >
-                                                    <Pencil size={16} />
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className="template-icon-button"
-                                                    title="Delete Email template"
-                                                    onClick={() =>
-                                                        setDeleteTarget({
-                                                            id: selectedTemplate.id,
-                                                            channel: "email",
-                                                        })
-                                                    }
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="template-field">
-                                            <label>Subject</label>
-
-                                            <input
-                                                type="text"
-                                                value={
-                                                    selectedTemplate.email
-                                                        .subject
-                                                }
-                                                readOnly
-                                            />
-                                        </div>
-
-                                        <div className="template-field">
-                                            <label>Message</label>
-
-                                            <textarea
-                                                value={
-                                                    selectedTemplate.email
-                                                        .message
-                                                }
-                                                readOnly
-                                                rows={6}
-                                            />
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            className="button button-primary template-use-button"
-                                            onClick={() =>
-                                                handleUseTemplate("email")
-                                            }
-                                        >
-                                            Use Template
-                                        </button>
-                                    </div>
-                                )}
+                                                    {formatEventName(
+                                                        event.eventName
+                                                    )}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+                                </div>
                             </section>
 
-                            <section className="content-card template-variable-card">
-                                <div>
-                                    <h2>Available Variables</h2>
+                            {!selectedTemplate ? (
+                                <div className="content-card">
                                     <p>
-                                        These variables will be replaced with
-                                        actual values when the notification is
-                                        sent.
+                                        No notification
+                                        template configured
+                                        for this event.
                                     </p>
                                 </div>
+                            ) : (
+                                <>
+                                    <section className="template-channel-grid">
+                                        {selectedTemplate.whatsapp.enabled && (
+                                            <div className="template-channel-card">
+                                                <div className="template-channel-header">
+                                                    <div>
+                                                        <h2>
+                                                            WhatsApp
+                                                        </h2>
 
-                                <div className="template-variables">
-                                    <span>{"{{patientName}}"}</span>
-                                    <span>{"{{appointmentDate}}"}</span>
-                                    <span>{"{{appointmentTime}}"}</span>
-                                    <span>{"{{clinicName}}"}</span>
-                                    <span>{"{{doctorName}}"}</span>
-                                </div>
-                            </section>
+                                                        <p>
+                                                            WhatsApp
+                                                            notification
+                                                            template
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="template-channel-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="template-icon-button"
+                                                            title="Edit WhatsApp template"
+                                                            onClick={() =>
+                                                                openEditForm(
+                                                                    selectedTemplate,
+                                                                    "whatsapp"
+                                                                )
+                                                            }
+                                                        >
+                                                            <Pencil
+                                                                size={
+                                                                    16
+                                                                }
+                                                            />
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            className="template-icon-button"
+                                                            title="Delete WhatsApp template"
+                                                            onClick={() =>
+                                                                setDeleteTarget(
+                                                                    {
+                                                                        channel:
+                                                                            "whatsapp",
+                                                                    }
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2
+                                                                size={
+                                                                    16
+                                                                }
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="template-field">
+                                                    <label>
+                                                        Message
+                                                    </label>
+
+                                                    <textarea
+                                                        value={
+                                                            selectedTemplate.whatsapp.message
+                                                        }
+                                                        readOnly
+                                                        rows={6}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedTemplate.sms.enabled && (
+                                            <div className="template-channel-card">
+                                                <div className="template-channel-header">
+                                                    <div>
+                                                        <h2>
+                                                            SMS
+                                                        </h2>
+
+                                                        <p>
+                                                            SMS
+                                                            notification
+                                                            template
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="template-channel-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="template-icon-button"
+                                                            title="Edit SMS template"
+                                                            onClick={() =>
+                                                                openEditForm(
+                                                                    selectedTemplate,
+                                                                    "sms"
+                                                                )
+                                                            }
+                                                        >
+                                                            <Pencil
+                                                                size={
+                                                                    16
+                                                                }
+                                                            />
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            className="template-icon-button"
+                                                            title="Delete SMS template"
+                                                            onClick={() =>
+                                                                setDeleteTarget(
+                                                                    {
+                                                                        channel:
+                                                                            "sms",
+                                                                    }
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2
+                                                                size={
+                                                                    16
+                                                                }
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="template-field">
+                                                    <label>
+                                                        Message
+                                                    </label>
+
+                                                    <textarea
+                                                        value={
+                                                            selectedTemplate.sms.message
+                                                        }
+                                                        readOnly
+                                                        rows={6}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedTemplate.email.enabled && (
+                                            <div className="template-channel-card template-email-card">
+                                                <div className="template-channel-header">
+                                                    <div>
+                                                        <h2>
+                                                            Email
+                                                        </h2>
+
+                                                        <p>
+                                                            Email
+                                                            notification
+                                                            template
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="template-channel-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="template-icon-button"
+                                                            title="Edit Email template"
+                                                            onClick={() =>
+                                                                openEditForm(
+                                                                    selectedTemplate,
+                                                                    "email"
+                                                                )
+                                                            }
+                                                        >
+                                                            <Pencil
+                                                                size={
+                                                                    16
+                                                                }
+                                                            />
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            className="template-icon-button"
+                                                            title="Delete Email template"
+                                                            onClick={() =>
+                                                                setDeleteTarget(
+                                                                    {
+                                                                        channel:
+                                                                            "email",
+                                                                    }
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2
+                                                                size={
+                                                                    16
+                                                                }
+                                                            />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="template-field">
+                                                    <label>
+                                                        Subject
+                                                    </label>
+
+                                                    <input
+                                                        type="text"
+                                                        value={
+                                                            selectedTemplate.email.subject
+                                                        }
+                                                        readOnly
+                                                    />
+                                                </div>
+
+                                                <div className="template-field">
+                                                    <label>
+                                                        Message
+                                                    </label>
+
+                                                    <textarea
+                                                        value={
+                                                            selectedTemplate.email.message
+                                                        }
+                                                        readOnly
+                                                        rows={6}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </section>
+
+                                    <section className="content-card template-variable-card">
+                                        <div>
+                                            <h2>
+                                                Available Variables
+                                            </h2>
+
+                                            <p>
+                                                These variables
+                                                will be replaced
+                                                with actual
+                                                values when the
+                                                notification is
+                                                sent.
+                                            </p>
+                                        </div>
+
+                                        <div className="template-variables">
+                                            <span>
+                                                {"{{patientName}}"}
+                                            </span>
+
+                                            <span>
+                                                {"{{appointmentDate}}"}
+                                            </span>
+
+                                            <span>
+                                                {"{{appointmentTime}}"}
+                                            </span>
+
+                                            <span>
+                                                {"{{clinicName}}"}
+                                            </span>
+
+                                            <span>
+                                                {"{{doctorName}}"}
+                                            </span>
+                                        </div>
+                                    </section>
+                                </>
+                            )}
                         </>
                     )}
                 </>
@@ -616,12 +847,16 @@ function Templates() {
                             <h1>
                                 {editingId !== null
                                     ? `Edit ${getChannelName(
-                                        editingChannel as Channel
-                                    )} Template`
+                                          editingChannel as Channel
+                                      )} Template`
                                     : "Add Notification Template"}
                             </h1>
 
-                            <p>Configure notification templates for different channels.</p>
+                            <p>
+                                Configure notification
+                                templates for different
+                                channels.
+                            </p>
                         </div>
                     </div>
 
@@ -629,26 +864,52 @@ function Templates() {
                         <div className="template-field">
                             <label>Event</label>
 
-                            <input
-                                type="text"
+                            <select
                                 value={eventName}
                                 onChange={(e) =>
-                                    setEventName(e.target.value)
+                                    setEventName(
+                                        e.target.value
+                                    )
                                 }
-                                placeholder="Enter event name"
-                                readOnly={editingId !== null}
-                            />
+                                disabled={
+                                    editingId !== null
+                                }
+                            >
+                                <option value="">
+                                    Select event
+                                </option>
+
+                                {events.map((event) => (
+                                    <option
+                                        key={event.id}
+                                        value={
+                                            event.eventName
+                                        }
+                                    >
+                                        {formatEventName(
+                                            event.eventName
+                                        )}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {(editingChannel === null ||
-                            editingChannel === "whatsapp") && (
+                            editingChannel ===
+                                "whatsapp") && (
                             <div className="template-field">
-                                <label>WhatsApp Message</label>
+                                <label>
+                                    WhatsApp Message
+                                </label>
 
                                 <textarea
-                                    value={whatsappMessage}
+                                    value={
+                                        whatsappMessage
+                                    }
                                     onChange={(e) =>
-                                        setWhatsappMessage(e.target.value)
+                                        setWhatsappMessage(
+                                            e.target.value
+                                        )
                                     }
                                     rows={5}
                                     placeholder="Enter WhatsApp message"
@@ -659,12 +920,16 @@ function Templates() {
                         {(editingChannel === null ||
                             editingChannel === "sms") && (
                             <div className="template-field">
-                                <label>SMS Message</label>
+                                <label>
+                                    SMS Message
+                                </label>
 
                                 <textarea
                                     value={smsMessage}
                                     onChange={(e) =>
-                                        setSmsMessage(e.target.value)
+                                        setSmsMessage(
+                                            e.target.value
+                                        )
                                     }
                                     rows={5}
                                     placeholder="Enter SMS message"
@@ -673,28 +938,41 @@ function Templates() {
                         )}
 
                         {(editingChannel === null ||
-                            editingChannel === "email") && (
+                            editingChannel ===
+                                "email") && (
                             <>
                                 <div className="template-field">
-                                    <label>Email Subject</label>
+                                    <label>
+                                        Email Subject
+                                    </label>
 
                                     <input
                                         type="text"
-                                        value={emailSubject}
+                                        value={
+                                            emailSubject
+                                        }
                                         onChange={(e) =>
-                                            setEmailSubject(e.target.value)
+                                            setEmailSubject(
+                                                e.target.value
+                                            )
                                         }
                                         placeholder="Enter email subject"
                                     />
                                 </div>
 
                                 <div className="template-field">
-                                    <label>Email Message</label>
+                                    <label>
+                                        Email Message
+                                    </label>
 
                                     <textarea
-                                        value={emailMessage}
+                                        value={
+                                            emailMessage
+                                        }
                                         onChange={(e) =>
-                                            setEmailMessage(e.target.value)
+                                            setEmailMessage(
+                                                e.target.value
+                                            )
                                         }
                                         rows={7}
                                         placeholder="Enter email message"
@@ -707,11 +985,8 @@ function Templates() {
                             <button
                                 type="button"
                                 className="button button-secondary"
-                                onClick={() => {
-                                    setShowForm(false);
-                                    setEditingId(null);
-                                    setEditingChannel(null);
-                                }}
+                                onClick={closeForm}
+                                disabled={saving}
                             >
                                 Cancel
                             </button>
@@ -720,8 +995,13 @@ function Templates() {
                                 type="button"
                                 className="button button-primary"
                                 onClick={saveTemplate}
+                                disabled={saving}
                             >
-                                {editingId !== null ? "Update Template" : "Save Template"}
+                                {saving
+                                    ? "Saving..."
+                                    : editingId !== null
+                                      ? "Update Template"
+                                      : "Save Template"}
                             </button>
                         </div>
                     </section>
@@ -741,7 +1021,8 @@ function Templates() {
                             </h2>
 
                             <p>
-                                Are you sure you want to delete this{" "}
+                                Are you sure you want to
+                                delete this{" "}
                                 {getChannelName(
                                     deleteTarget.channel
                                 )}{" "}
@@ -756,6 +1037,7 @@ function Templates() {
                                 onClick={() =>
                                     setDeleteTarget(null)
                                 }
+                                disabled={saving}
                             >
                                 Cancel
                             </button>
@@ -763,9 +1045,14 @@ function Templates() {
                             <button
                                 type="button"
                                 className="button button-danger"
-                                onClick={deleteTemplate}
+                                onClick={
+                                    handleDeleteTemplate
+                                }
+                                disabled={saving}
                             >
-                                Delete
+                                {saving
+                                    ? "Deleting..."
+                                    : "Delete"}
                             </button>
                         </div>
                     </div>

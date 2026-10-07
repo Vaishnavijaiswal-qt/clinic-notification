@@ -46,6 +46,7 @@ function EventMapping() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [deleteId, setDeleteId] = useState<number | null>(null);
+
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
@@ -602,205 +603,225 @@ function EventMapping() {
 
     return (
         <div className="events-page">
-            {!showForm ? (
-                <>
-                    <div className="page-header">
-                        <div>
-                            <h1>
-                                Event Mapping
-                            </h1>
 
-                            <p>
-                                Configure events and event types for clinics.
-                            </p>
-                        </div>
+            {/* Page Header */}
+            <div className="page-header">
+                <div>
+                    <h1>
+                        Event Mapping
+                    </h1>
 
-                        <button
-                            type="button"
-                            className="primary-button"
-                            onClick={
-                                openAddForm
-                            }
-                        >
-                            + Add Event Mapping
-                        </button>
-                    </div>
+                    <p>
+                        Configure events and event types for clinics.
+                    </p>
+                </div>
 
-                    <div className="search-section">
-                        <div className="search-box">
-                            <Search
-                                size={18}
-                            />
+                <button
+                    type="button"
+                    className="primary-button"
+                    onClick={openAddForm}
+                >
+                    + Add Event Mapping
+                </button>
+            </div>
 
-                            <input
-                                type="text"
-                                placeholder="Search event mappings by clients and clinics..."
-                                value={search}
-                                onChange={(e) =>
-                                    handleSearch(
-                                        e.target
-                                            .value
-                                    )
-                                }
-                            />
-                        </div>
+            {/* Search */}
+            <div className="search-section">
 
-                        <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={
-                                handleResetSearch
-                            }
-                        >
-                            Reset
-                        </button>
-                    </div>
+                <div className="search-box">
+                    <Search size={18} />
 
-                    <div className="events-table-container">
-                        <div className="events-table-header event-mapping-table">
-                            <div>
-                                Event
-                            </div>
-
-                            <div>
-                                Event Type
-                            </div>
-
-                            <div>
-                                Client
-                            </div>
-
-                            <div>
-                                Clinic
-                            </div>
-
-                            <div>
-                                Actions
-                            </div>
-                        </div>
-
-                        {loading ? (
-                            <div className="table-message">
-                                <p>
-                                    Loading event mappings...
-                                </p>
-                            </div>
-                        ) : mappings.length >
-                          0 ? (
-                            mappings.map(
-                                (
-                                    mapping
-                                ) => (
-                                    <div
-                                        className="events-table-row event-mapping-table"
-                                        key={
-                                            mapping.id
-                                        }
-                                    >
-                                        <div className="event-title">
-                                            {
-                                                mapping.event
-                                            }
-                                        </div>
-
-                                        <div className="event-type-list">
-                                            {mapping.eventTypes.map(
-                                                (
-                                                    type
-                                                ) => (
-                                                    <span
-                                                        className="event-status"
-                                                        key={
-                                                            type
-                                                        }
-                                                    >
-                                                        {
-                                                            type
-                                                        }
-                                                    </span>
-                                                )
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            {
-                                                mapping.client
-                                            }
-                                        </div>
-
-                                        <div>
-                                            {
-                                                mapping.clinic
-                                            }
-                                        </div>
-
-                                        <div className="action-buttons">
-                                            <button
-                                                type="button"
-                                                className="icon-button edit-button"
-                                                onClick={() =>
-                                                    openEditForm(
-                                                        mapping
-                                                    )
-                                                }
-                                                title="Edit"
-                                            >
-                                                <Pencil
-                                                    size={
-                                                        16
-                                                    }
-                                                />
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="icon-button delete-button"
-                                                onClick={() =>
-                                                    setDeleteId(
-                                                        mapping.id
-                                                    )
-                                                }
-                                                title="Delete"
-                                            >
-                                                <Trash2
-                                                    size={
-                                                        16
-                                                    }
-                                                />
-                                            </button>
-                                        </div>
-                                    </div>
-                                )
+                    <input
+                        type="text"
+                        placeholder="Search event mappings by clients and clinics..."
+                        value={search}
+                        onChange={(e) =>
+                            handleSearch(
+                                e.target.value
                             )
-                        ) : (
-                            <div className="table-message">
-                                <p>
-                                    No event mappings found.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </>
-            ) : (
-                <>
-                    <div className="page-header">
-                        <div>
-                            <h1>
-                                {editingId !==
-                                null
-                                    ? "Edit Event Mapping"
-                                    : "Add Event Mapping"}
-                            </h1>
+                        }
+                    />
+                </div>
 
-                            <p>
-                                Select a client, clinic, events and event types.
-                            </p>
-                        </div>
+                <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={
+                        handleResetSearch
+                    }
+                >
+                    Reset
+                </button>
+
+            </div>
+
+            {/* Mapping Table */}
+            <div className="events-table-container">
+
+                <div className="events-table-header event-mapping-table">
+
+                    <div>
+                        Event
                     </div>
+
+                    <div>
+                        Event Type
+                    </div>
+
+                    <div>
+                        Client
+                    </div>
+
+                    <div>
+                        Clinic
+                    </div>
+
+                    <div>
+                        Actions
+                    </div>
+
+                </div>
+
+                {loading ? (
+                    <div className="table-message">
+                        <p>
+                            Loading event mappings...
+                        </p>
+                    </div>
+                ) : mappings.length > 0 ? (
+                    mappings.map(
+                        (mapping) => (
+                            <div
+                                className="events-table-row event-mapping-table"
+                                key={
+                                    mapping.id
+                                }
+                            >
+
+                                <div className="event-title">
+                                    {
+                                        mapping.event
+                                    }
+                                </div>
+
+                                <div className="event-type-list">
+                                    {mapping.eventTypes.map(
+                                        (type) => (
+                                            <span
+                                                className="event-status"
+                                                key={
+                                                    type
+                                                }
+                                            >
+                                                {
+                                                    type
+                                                }
+                                            </span>
+                                        )
+                                    )}
+                                </div>
+
+                                <div>
+                                    {
+                                        mapping.client
+                                    }
+                                </div>
+
+                                <div>
+                                    {
+                                        mapping.clinic
+                                    }
+                                </div>
+
+                                <div className="action-buttons">
+
+                                    <button
+                                        type="button"
+                                        className="icon-button edit-button"
+                                        onClick={() =>
+                                            openEditForm(
+                                                mapping
+                                            )
+                                        }
+                                        title="Edit"
+                                    >
+                                        <Pencil
+                                            size={16}
+                                        />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="icon-button delete-button"
+                                        onClick={() =>
+                                            setDeleteId(
+                                                mapping.id
+                                            )
+                                        }
+                                        title="Delete"
+                                    >
+                                        <Trash2
+                                            size={16}
+                                        />
+                                    </button>
+
+                                </div>
+
+                            </div>
+                        )
+                    )
+                ) : (
+                    <div className="table-message">
+                        <p>
+                            No event mappings found.
+                        </p>
+                    </div>
+                )}
+
+            </div>
+
+            {/* Add / Edit Event Mapping Modal */}
+            {showForm && (
+                <div className="event-modal-overlay">
 
                     <div className="event-form-container">
+
+                        {/* Modal Header */}
+                        <div className="event-form-header">
+
+                            <div>
+                                <span className="event-form-label">
+                                    {editingId !== null
+                                        ? "EDIT EVENT MAPPING"
+                                        : "NEW EVENT MAPPING"}
+                                </span>
+
+                                <h3>
+                                    {editingId !== null
+                                        ? "Edit Event Mapping"
+                                        : "Add Event Mapping"}
+                                </h3>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="event-form-close"
+                                onClick={
+                                    resetForm
+                                }
+                                aria-label="Close"
+                            >
+                                ×
+                            </button>
+
+                        </div>
+
+                        {/* Modal Body */}
                         <div className="event-form">
+
+                            {/* Client */}
                             <div className="form-group">
+
                                 <label>
                                     Client{" "}
                                     <span className="required">
@@ -809,14 +830,10 @@ function EventMapping() {
                                 </label>
 
                                 <select
-                                    value={
-                                        client
-                                    }
+                                    value={client}
                                     onChange={(e) =>
                                         handleClientChange(
-                                            e
-                                                .target
-                                                .value
+                                            e.target.value
                                         )
                                     }
                                     disabled={
@@ -829,9 +846,7 @@ function EventMapping() {
                                     </option>
 
                                     {clients.map(
-                                        (
-                                            item
-                                        ) => (
+                                        (item) => (
                                             <option
                                                 key={
                                                     item.id
@@ -855,9 +870,12 @@ function EventMapping() {
                                         }
                                     </p>
                                 )}
+
                             </div>
 
+                            {/* Clinic */}
                             <div className="form-group">
+
                                 <label>
                                     Clinic{" "}
                                     <span className="required">
@@ -866,14 +884,10 @@ function EventMapping() {
                                 </label>
 
                                 <select
-                                    value={
-                                        clinic
-                                    }
+                                    value={clinic}
                                     onChange={(e) =>
                                         handleClinicChange(
-                                            e
-                                                .target
-                                                .value
+                                            e.target.value
                                         )
                                     }
                                     disabled={
@@ -887,9 +901,7 @@ function EventMapping() {
                                     </option>
 
                                     {clinics.map(
-                                        (
-                                            item
-                                        ) => (
+                                        (item) => (
                                             <option
                                                 key={
                                                     item.id
@@ -913,11 +925,13 @@ function EventMapping() {
                                         }
                                     </p>
                                 )}
+
                             </div>
 
-                            {editingId ===
-                            null ? (
+                            {/* Events */}
+                            {editingId === null ? (
                                 <div className="form-group">
+
                                     <label>
                                         Events{" "}
                                         <span className="required">
@@ -926,6 +940,7 @@ function EventMapping() {
                                     </label>
 
                                     <div className="event-multi-select">
+
                                         <div
                                             className={`event-multi-select-input ${
                                                 !clinic
@@ -945,7 +960,9 @@ function EventMapping() {
                                                 }
                                             }}
                                         >
+
                                             <div className="event-selected-items">
+
                                                 {selectedEvents.length ===
                                                 0 ? (
                                                     <span className="event-placeholder">
@@ -984,16 +1001,19 @@ function EventMapping() {
                                                         )
                                                     )
                                                 )}
+
                                             </div>
 
                                             <span className="event-dropdown-arrow">
                                                 ▼
                                             </span>
+
                                         </div>
 
                                         {dropdownOpen &&
                                             clinic && (
                                                 <div className="event-dropdown-menu">
+
                                                     {availableEvents.map(
                                                         (
                                                             event
@@ -1049,8 +1069,10 @@ function EventMapping() {
                                                             </div>
                                                         )
                                                     )}
+
                                                 </div>
                                             )}
+
                                     </div>
 
                                     {errors.events && (
@@ -1060,9 +1082,11 @@ function EventMapping() {
                                             }
                                         </p>
                                     )}
+
                                 </div>
                             ) : (
                                 <div className="form-group">
+
                                     <label>
                                         Event
                                     </label>
@@ -1073,104 +1097,118 @@ function EventMapping() {
                                                 ?.event
                                         }
                                     </div>
+
                                 </div>
                             )}
 
+                            {/* Selected Events */}
                             {selectedEvents.length >
                                 0 && (
-                                <div className="selected-events">
-                                    <label>
-                                        Selected Events
-                                    </label>
+                                    <div className="selected-events">
 
-                                    {selectedEvents.map(
-                                        (
-                                            item
-                                        ) => (
-                                            <div
-                                                className="selected-event-card"
-                                                key={
-                                                    item.eventId
-                                                }
-                                            >
-                                                <div className="selected-event-header">
-                                                    <span>
-                                                        {
-                                                            item.event
-                                                        }
-                                                    </span>
+                                        <label>
+                                            Selected Events
+                                        </label>
 
-                                                    {editingId ===
-                                                        null && (
-                                                        <button
-                                                            type="button"
-                                                            className="remove-event"
-                                                            onClick={() =>
-                                                                removeEvent(
-                                                                    item.eventId
-                                                                )
+                                        {selectedEvents.map(
+                                            (
+                                                item
+                                            ) => (
+                                                <div
+                                                    className="selected-event-card"
+                                                    key={
+                                                        item.eventId
+                                                    }
+                                                >
+
+                                                    <div className="selected-event-header">
+
+                                                        <span>
+                                                            {
+                                                                item.event
                                                             }
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                <div className="selected-event-types">
-                                                    <span>
-                                                        Event Types{" "}
-                                                        <span className="required">
-                                                            *
                                                         </span>
-                                                    </span>
 
-                                                    <div className="event-type-options">
-                                                        {eventTypes.map(
-                                                            (
-                                                                type
-                                                            ) => (
-                                                                <label
-                                                                    key={
-                                                                        type
+                                                        {editingId ===
+                                                            null && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="remove-event"
+                                                                    onClick={() =>
+                                                                        removeEvent(
+                                                                            item.eventId
+                                                                        )
                                                                     }
-                                                                    className="event-type-option"
                                                                 >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={item.eventTypes.includes(
-                                                                            type
-                                                                        )}
-                                                                        onChange={() =>
-                                                                            toggleEventType(
-                                                                                item.eventId,
-                                                                                type
-                                                                            )
-                                                                        }
-                                                                    />
+                                                                    Remove
+                                                                </button>
+                                                            )}
 
-                                                                    {
-                                                                        type
-                                                                    }
-                                                                </label>
-                                                            )
-                                                        )}
                                                     </div>
+
+                                                    <div className="selected-event-types">
+
+                                                        <span>
+                                                            Event Types{" "}
+                                                            <span className="required">
+                                                                *
+                                                            </span>
+                                                        </span>
+
+                                                        <div className="event-type-options">
+
+                                                            {eventTypes.map(
+                                                                (
+                                                                    type
+                                                                ) => (
+                                                                    <label
+                                                                        key={
+                                                                            type
+                                                                        }
+                                                                        className="event-type-option"
+                                                                    >
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={item.eventTypes.includes(
+                                                                                type
+                                                                            )}
+                                                                            onChange={() =>
+                                                                                toggleEventType(
+                                                                                    item.eventId,
+                                                                                    type
+                                                                                )
+                                                                            }
+                                                                        />
+
+                                                                        {
+                                                                            type
+                                                                        }
+                                                                    </label>
+                                                                )
+                                                            )}
+
+                                                        </div>
+
+                                                    </div>
+
                                                 </div>
-                                            </div>
-                                        )
-                                    )}
+                                            )
+                                        )}
 
-                                    {errors.eventTypes && (
-                                        <p className="form-error">
-                                            {
-                                                errors.eventTypes
-                                            }
-                                        </p>
-                                    )}
-                                </div>
-                            )}
+                                        {errors.eventTypes && (
+                                            <p className="form-error">
+                                                {
+                                                    errors.eventTypes
+                                                }
+                                            </p>
+                                        )}
 
+                                    </div>
+                                )}
+
+                            {/* Modal Actions */}
                             <div className="form-actions">
+
                                 <button
                                     type="button"
                                     className="secondary-button"
@@ -1188,21 +1226,28 @@ function EventMapping() {
                                         saveMapping
                                     }
                                 >
-                                    {editingId !==
-                                    null
+                                    {editingId !== null
                                         ? "Update Mapping"
                                         : "Save Mapping"}
                                 </button>
+
                             </div>
+
                         </div>
+
                     </div>
-                </>
+
+                </div>
             )}
 
+            {/* Delete Confirmation */}
             {deleteId !== null && (
                 <div className="delete-confirmation">
+
                     <div className="delete-confirmation-card">
+
                         <div className="delete-confirmation-header">
+
                             <h2>
                                 Delete Event Mapping
                             </h2>
@@ -1210,9 +1255,11 @@ function EventMapping() {
                             <p>
                                 Are you sure you want to delete this event mapping?
                             </p>
+
                         </div>
 
                         <div className="delete-confirmation-actions">
+
                             <button
                                 type="button"
                                 className="secondary-button"
@@ -1234,10 +1281,14 @@ function EventMapping() {
                             >
                                 Delete
                             </button>
+
                         </div>
+
                     </div>
+
                 </div>
             )}
+
         </div>
     );
 }
