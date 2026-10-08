@@ -64,7 +64,9 @@ function EventMapping() {
     const [showForm, setShowForm] = useState(false);
 
     const [dropdownOpen, setDropdownOpen] = useState(false);
+
     const [editingId, setEditingId] =  useState<number | null>(null);
+
     const [editingMapping, setEditingMapping] = useState<Mapping | null>(null);
     const [deleteMappingIds, setDeleteMappingIds] = useState<number[] | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -126,10 +128,12 @@ function EventMapping() {
             eventTypes: [type],
             clientId: item.clientId,
             client:
-                item.clientName || "Unknown Client",
+                item.clientName ||
+                "Unknown Client",
             clinicId: item.clinicId,
             clinic:
-                item.clinicName || "Unknown Clinic",
+                item.clinicName ||
+                "Unknown Clinic",
         };
     };
 
@@ -250,7 +254,7 @@ function EventMapping() {
                 await getEventMappings(
                     searchValue,
                     0,
-                    1000
+                    10
                 );
 
             const mappingRows =
@@ -294,12 +298,12 @@ function EventMapping() {
                             getEvents(
                                 "",
                                 0,
-                                1000
+                                10
                             ),
                             getEventMappings(
                                 "",
                                 0,
-                                1000
+                                10
                             ),
                         ]);
 
