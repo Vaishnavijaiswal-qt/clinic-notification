@@ -71,6 +71,18 @@ export async function savePreferences(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to save preferences");
+        const errorMessage =
+            await response.text();
+
+        console.error(
+            "Save preferences API error:",
+            response.status,
+            errorMessage
+        );
+
+        throw new Error(
+            errorMessage ||
+            "Failed to save preferences"
+        );
     }
 }

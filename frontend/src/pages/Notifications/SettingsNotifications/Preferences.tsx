@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import {
     getClients,
     getClinics,
@@ -12,47 +13,95 @@ import type {
 } from "../../../api/preferencesApi";
 
 import { getEventMappings } from "../../../api/eventmappingApi";
-import type { EventMapping } from "../../../api/eventmappingApi";
+
+import type {
+    EventMapping,
+} from "../../../api/eventmappingApi";
 
 import { getEvents } from "../../../api/eventsApi";
-import type { NotificationEvent } from "../../../api/eventsApi";
 
-type PreferenceRow = NotificationPreference & {
-    id: number;
-};
+import type {
+    NotificationEvent,
+} from "../../../api/eventsApi";
+
+type PreferenceRow =
+    NotificationPreference & {
+        id: number;
+    };
 
 function Preferences() {
-    const [clients, setClients] = useState<Client[]>([]);
-    const [clinics, setClinics] = useState<Clinic[]>([]);
+    const [clients, setClients] =
+        useState<Client[]>([]);
 
-    const [selectedClient, setSelectedClient] = useState("");
-    const [selectedClinic, setSelectedClinic] = useState("");
+    const [clinics, setClinics] =
+        useState<Clinic[]>([]);
 
-    const [mappings, setMappings] = useState<EventMapping[]>([]);
-    const [events, setEvents] = useState<NotificationEvent[]>([]);
+    const [selectedClient, setSelectedClient] =
+        useState("");
+
+    const [selectedClinic, setSelectedClinic] =
+        useState("");
+
+    const [mappings, setMappings] =
+        useState<EventMapping[]>([]);
+
+    const [events, setEvents] =
+        useState<NotificationEvent[]>([]);
 
     const [preferenceChanges, setPreferenceChanges] =
-        useState<Record<number, Partial<PreferenceRow>>>({});
+        useState<
+            Record<
+                number,
+                Partial<PreferenceRow>
+            >
+        >({});
 
-    const [doNotDisturb, setDoNotDisturb] = useState(false);
-    const [loadingClients, setLoadingClients] = useState(true);
-    const [loadingClinics, setLoadingClinics] = useState(false);
-    const [loadingEvents, setLoadingEvents] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState("");
+    const [doNotDisturb, setDoNotDisturb] =
+        useState(false);
 
+    const [loadingClients, setLoadingClients] =
+        useState(true);
+
+    const [loadingClinics, setLoadingClinics] =
+        useState(false);
+
+    const [loadingEvents, setLoadingEvents] =
+        useState(false);
+
+    const [saving, setSaving] =
+        useState(false);
+
+    const [error, setError] =
+        useState("");
+
+    /*
+     * Load clients
+     */
     useEffect(() => {
         const loadClients = async () => {
             try {
-                const data = await getClients();
-                setClients(data);
+                setLoadingClients(true);
+                setError("");
+
+                const data =
+                    await getClients();
+
+                setClients(
+                    Array.isArray(data)
+                        ? data
+                        : []
+                );
             } catch (error) {
                 console.error(
                     "Failed to load clients:",
                     error
                 );
 
-                setError("Failed to load clients.");
+                setClients([]);
+
+                setError(
+                    "Failed to load clients."
+                );
             } finally {
                 setLoadingClients(false);
             }
@@ -61,24 +110,88 @@ function Preferences() {
         loadClients();
     }, []);
 
+    /*
+     * Load notification mappings
+     * and notification events
+     */
     useEffect(() => {
         const loadEventData = async () => {
             try {
                 setLoadingEvents(true);
+                setError("");
 
-                const [mappingData, eventResponse] =
-                    await Promise.all([
-                        getEventMappings(),
-                        getEvents("", 0, 1000),
-                    ]);
+                const [
+                    mappingResponse,
+                    eventResponse,
+                ] = await Promise.all([
+                    getEventMappings(
+                        "",
+                        0,
+                        1000
+                    ),
 
-                setMappings(mappingData);
-                setEvents(eventResponse.content);
+                    getEvents(
+                        "",
+                        0,
+                        1000
+                    ),
+                ]);
+
+                /*
+                 * Event Mapping API returns:
+                 *
+                 * {
+                 *   content: [...],
+                 *   pagination: {...}
+                 * }
+                 *
+                 * We only need content here.
+                 */
+                const mappingList =
+                    Array.isArray(
+                        mappingResponse
+                    )
+                        ? mappingResponse
+                        : Array.isArray(
+                              mappingResponse?.content
+                          )
+                        ? mappingResponse.content
+                        : [];
+
+                /*
+                 * Events API returns:
+                 *
+                 * {
+                 *   content: [...],
+                 *   ...
+                 * }
+                 */
+                const eventList =
+                    Array.isArray(
+                        eventResponse
+                    )
+                        ? eventResponse
+                        : Array.isArray(
+                              eventResponse?.content
+                          )
+                        ? eventResponse.content
+                        : [];
+
+                setMappings(
+                    mappingList
+                );
+
+                setEvents(
+                    eventList
+                );
             } catch (error) {
                 console.error(
                     "Failed to load notification events:",
                     error
                 );
+
+                setMappings([]);
+                setEvents([]);
 
                 setError(
                     "Failed to load notification events."
@@ -91,86 +204,172 @@ function Preferences() {
         loadEventData();
     }, []);
 
-    const preferences = useMemo<PreferenceRow[]>(() => {
-        if (!selectedClient || !selectedClinic) {
-            return [];
-        }
+    /*
+     * Build preferences for
+     * selected client + clinic
+     */
+    const preferences =
+        useMemo<PreferenceRow[]>(
+            () => {
+                if (
+                    !selectedClient ||
+                    !selectedClinic
+                ) {
+                    return [];
+                }
 
-        const clientId = Number(selectedClient);
-        const clinicId = Number(selectedClinic);
+                const clientId =
+                    Number(
+                        selectedClient
+                    );
 
-        const grouped = new Map<number, PreferenceRow>();
+                const clinicId =
+                    Number(
+                        selectedClinic
+                    );
 
-        mappings
-            .filter(
-                (mapping) =>
-                    mapping.clientId === clientId &&
-                    mapping.clinicId === clinicId
-            )
-            .forEach((mapping) => {
-                const event = events.find(
-                    (item) => item.id === mapping.eventId
+                const grouped =
+                    new Map<
+                        number,
+                        PreferenceRow
+                    >();
+
+                /*
+                 * Extra safety:
+                 * always work with an array.
+                 */
+                const mappingList =
+                    Array.isArray(
+                        mappings
+                    )
+                        ? mappings
+                        : [];
+
+                mappingList
+                    .filter(
+                        (mapping) =>
+                            mapping.clientId ===
+                                clientId &&
+                            mapping.clinicId ===
+                                clinicId
+                    )
+                    .forEach(
+                        (mapping) => {
+                            const event =
+                                events.find(
+                                    (item) =>
+                                        item.id ===
+                                        mapping.eventId
+                                );
+
+                            if (!event) {
+                                return;
+                            }
+
+                            if (
+                                !grouped.has(
+                                    mapping.eventId
+                                )
+                            ) {
+                                grouped.set(
+                                    mapping.eventId,
+                                    {
+                                        id: mapping.eventId,
+
+                                        notificationEvent:
+                                            event.eventName,
+
+                                        whatsappEnabled:
+                                            false,
+
+                                        smsEnabled:
+                                            false,
+
+                                        emailEnabled:
+                                            false,
+                                    }
+                                );
+                            }
+
+                            const current =
+                                grouped.get(
+                                    mapping.eventId
+                                );
+
+                            if (!current) {
+                                return;
+                            }
+
+                            if (
+                                mapping.notificationType ===
+                                "WHATSAPP"
+                            ) {
+                                current.whatsappEnabled =
+                                    true;
+                            }
+
+                            if (
+                                mapping.notificationType ===
+                                "SMS"
+                            ) {
+                                current.smsEnabled =
+                                    true;
+                            }
+
+                            if (
+                                mapping.notificationType ===
+                                "EMAIL"
+                            ) {
+                                current.emailEnabled =
+                                    true;
+                            }
+                        }
+                    );
+
+                return Array.from(
+                    grouped.values()
+                ).map(
+                    (preference) => ({
+                        ...preference,
+
+                        ...preferenceChanges[
+                            preference.id
+                        ],
+                    })
                 );
-
-                if (!event) {
-                    return;
-                }
-
-                if (!grouped.has(mapping.eventId)) {
-                    grouped.set(mapping.eventId, {
-                        id: mapping.eventId,
-                        notificationEvent: event.eventName,
-                        whatsappEnabled: false,
-                        smsEnabled: false,
-                        emailEnabled: false,
-                    });
-                }
-
-                const current = grouped.get(mapping.eventId)!;
-
-                if (
-                    mapping.notificationType ===
-                    "WHATSAPP"
-                ) {
-                    current.whatsappEnabled = true;
-                }
-
-                if (
-                    mapping.notificationType === "SMS"
-                ) {
-                    current.smsEnabled = true;
-                }
-
-                if (
-                    mapping.notificationType === "EMAIL"
-                ) {
-                    current.emailEnabled = true;
-                }
-            });
-
-        return Array.from(grouped.values()).map(
-            (preference) => ({
-                ...preference,
-                ...preferenceChanges[preference.id],
-            })
+            },
+            [
+                selectedClient,
+                selectedClinic,
+                mappings,
+                events,
+                preferenceChanges,
+            ]
         );
-    }, [
-        selectedClient,
-        selectedClinic,
-        mappings,
-        events,
-        preferenceChanges,
-    ]);
 
+    /*
+     * Client change
+     */
     const handleClientChange = async (
         event: React.ChangeEvent<HTMLSelectElement>
     ) => {
-        const clientId = event.target.value;
+        const clientId =
+            event.target.value;
 
-        setSelectedClient(clientId);
+        setSelectedClient(
+            clientId
+        );
+
+        /*
+         * Clinic must be reset
+         * when client changes.
+         */
         setSelectedClinic("");
+
         setClinics([]);
+
         setPreferenceChanges({});
+
         setError("");
 
         if (!clientId) {
@@ -180,31 +379,52 @@ function Preferences() {
         try {
             setLoadingClinics(true);
 
-            const data = await getClinics(
-                Number(clientId)
-            );
+            const data =
+                await getClinics(
+                    Number(clientId)
+                );
 
-            setClinics(data);
+            setClinics(
+                Array.isArray(data)
+                    ? data
+                    : []
+            );
         } catch (error) {
             console.error(
                 "Failed to load clinics:",
                 error
             );
 
-            setError("Failed to load clinics.");
+            setClinics([]);
+
+            setError(
+                "Failed to load clinics."
+            );
         } finally {
-            setLoadingClinics(false);
+            setLoadingClinics(
+                false
+            );
         }
     };
 
+    /*
+     * Clinic change
+     */
     const handleClinicChange = (
         event: React.ChangeEvent<HTMLSelectElement>
     ) => {
-        setSelectedClinic(event.target.value);
+        setSelectedClinic(
+            event.target.value
+        );
+
         setPreferenceChanges({});
+
         setError("");
     };
 
+    /*
+     * Toggle WhatsApp / SMS / Email
+     */
     const handleToggle = (
         id: number,
         channel:
@@ -222,21 +442,34 @@ function Preferences() {
             return;
         }
 
-        setPreferenceChanges((current) => ({
-            ...current,
-            [id]: {
-                ...current[id],
-                [channel]:
-                    !currentPreference[channel],
-            },
-        }));
+        setPreferenceChanges(
+            (current) => ({
+                ...current,
+
+                [id]: {
+                    ...current[id],
+
+                    [channel]:
+                        !currentPreference[
+                            channel
+                        ],
+                },
+            })
+        );
     };
 
+    /*
+     * Save preferences
+     */
     const handleSave = async () => {
-        if (!selectedClient || !selectedClinic) {
+        if (
+            !selectedClient ||
+            !selectedClinic
+        ) {
             setError(
                 "Please select a client and clinic."
             );
+
             return;
         }
 
@@ -245,36 +478,67 @@ function Preferences() {
             setError("");
 
             await savePreferences({
-                clientId: Number(selectedClient),
-                clinicId: Number(selectedClinic),
+                clientId:
+                    Number(
+                        selectedClient
+                    ),
 
-                preferences: preferences.map(
-                    (preference) => ({
-                        notificationEvent:
-                            preference.notificationEvent ===
-                            "Patient Registration"
-                                ? "PATIENT_REGISTRATION"
-                                : preference.notificationEvent ===
-                                    "Patient Appointment"
-                                    ? "PATIENT_APPOINTMENT"
-                                    : preference.notificationEvent ===
-                                        "Appointment Rescheduled"
-                                        ? "APPOINTMENT_RESCHEDULED"
-                                        : "APPOINTMENT_CANCELLED",
+                clinicId:
+                    Number(
+                        selectedClinic
+                    ),
 
-                        whatsappEnabled:
-                            preference.whatsappEnabled,
+                preferences:
+                    preferences.map(
+                        (preference) => {
+                            let notificationEvent =
+                                "";
 
-                        smsEnabled:
-                            preference.smsEnabled,
+                            if (
+                                preference.notificationEvent ===
+                                "Patient Registration"
+                            ) {
+                                notificationEvent =
+                                    "PATIENT_REGISTRATION";
+                            } else if (
+                                preference.notificationEvent ===
+                                "Patient Appointment"
+                            ) {
+                                notificationEvent =
+                                    "PATIENT_APPOINTMENT";
+                            } else if (
+                                preference.notificationEvent ===
+                                "Appointment Rescheduled"
+                            ) {
+                                notificationEvent =
+                                    "APPOINTMENT_RESCHEDULED";
+                            } else if (
+                                preference.notificationEvent ===
+                                "Appointment Cancelled"
+                            ) {
+                                notificationEvent =
+                                    "APPOINTMENT_CANCELLED";
+                            }
 
-                        emailEnabled:
-                            preference.emailEnabled,
-                    })
-                ),
+                            return {
+                                notificationEvent,
+
+                                whatsappEnabled:
+                                    preference.whatsappEnabled,
+
+                                smsEnabled:
+                                    preference.smsEnabled,
+
+                                emailEnabled:
+                                    preference.emailEnabled,
+                            };
+                        }
+                    ),
             });
 
-            setPreferenceChanges({});
+            setPreferenceChanges(
+                {}
+            );
 
             alert(
                 "Notification preferences saved successfully."
@@ -293,20 +557,30 @@ function Preferences() {
         }
     };
 
+    /*
+     * Cancel / reset
+     */
     const handleCancel = () => {
         setSelectedClient("");
         setSelectedClinic("");
+
         setClinics([]);
+
         setPreferenceChanges({});
+
         setDoNotDisturb(false);
+
         setError("");
     };
 
     return (
         <div className="page-container">
+
             <div className="page-header">
                 <div>
-                    <h1>Notification Preferences</h1>
+                    <h1>
+                        Notification Preferences
+                    </h1>
 
                     <p>
                         Manage how notifications are
@@ -316,9 +590,12 @@ function Preferences() {
             </div>
 
             <section className="content-card">
+
                 <div className="card-header">
                     <div>
-                        <h2>Configuration</h2>
+                        <h2>
+                            Configuration
+                        </h2>
 
                         <p>
                             Select the client and clinic
@@ -329,13 +606,22 @@ function Preferences() {
                 </div>
 
                 <div className="form-grid">
+
                     <div className="form-field">
-                        <label>Client</label>
+                        <label>
+                            Client
+                        </label>
 
                         <select
-                            value={selectedClient}
-                            onChange={handleClientChange}
-                            disabled={loadingClients}
+                            value={
+                                selectedClient
+                            }
+                            onChange={
+                                handleClientChange
+                            }
+                            disabled={
+                                loadingClients
+                            }
                         >
                             <option value="">
                                 {loadingClients
@@ -343,23 +629,37 @@ function Preferences() {
                                     : "Select Client"}
                             </option>
 
-                            {clients.map((client) => (
-                                <option
-                                    key={client.id}
-                                    value={client.id}
-                                >
-                                    {client.name}
-                                </option>
-                            ))}
+                            {clients.map(
+                                (client) => (
+                                    <option
+                                        key={
+                                            client.id
+                                        }
+                                        value={
+                                            client.id
+                                        }
+                                    >
+                                        {
+                                            client.name
+                                        }
+                                    </option>
+                                )
+                            )}
                         </select>
                     </div>
 
                     <div className="form-field">
-                        <label>Clinic</label>
+                        <label>
+                            Clinic
+                        </label>
 
                         <select
-                            value={selectedClinic}
-                            onChange={handleClinicChange}
+                            value={
+                                selectedClinic
+                            }
+                            onChange={
+                                handleClinicChange
+                            }
                             disabled={
                                 !selectedClient ||
                                 loadingClinics
@@ -371,25 +671,42 @@ function Preferences() {
                                     : "Select Clinic"}
                             </option>
 
-                            {clinics.map((clinic) => (
-                                <option
-                                    key={clinic.id}
-                                    value={clinic.id}
-                                >
-                                    {clinic.name}
-                                </option>
-                            ))}
+                            {clinics.map(
+                                (clinic) => (
+                                    <option
+                                        key={
+                                            clinic.id
+                                        }
+                                        value={
+                                            clinic.id
+                                        }
+                                    >
+                                        {
+                                            clinic.name
+                                        }
+                                    </option>
+                                )
+                            )}
                         </select>
                     </div>
+
                 </div>
+
             </section>
 
-            {error && <p>{error}</p>}
+            {error && (
+                <p className="error-message">
+                    {error}
+                </p>
+            )}
 
             <section className="content-section">
+
                 <div className="section-header">
                     <div>
-                        <h2>Communication Preferences</h2>
+                        <h2>
+                            Communication Preferences
+                        </h2>
 
                         <p>
                             Control which communication
@@ -400,41 +717,64 @@ function Preferences() {
                 </div>
 
                 <div className="table-card">
+
                     <div className="table-header">
-                        <div>Notification Event</div>
-                        <div>WhatsApp</div>
-                        <div>SMS</div>
-                        <div>Email</div>
+
+                        <div>
+                            Notification Event
+                        </div>
+
+                        <div>
+                            WhatsApp
+                        </div>
+
+                        <div>
+                            SMS
+                        </div>
+
+                        <div>
+                            Email
+                        </div>
+
                     </div>
 
                     {!selectedClinic ? (
                         <div className="table-row">
+
                             <div>
                                 Select a clinic to configure
                                 notification preferences.
                             </div>
+
                         </div>
                     ) : loadingEvents ? (
                         <div className="table-row">
+
                             <div>
                                 Loading notification
                                 events...
                             </div>
+
                         </div>
                     ) : preferences.length === 0 ? (
                         <div className="table-row">
+
                             <div>
                                 No notification events are
                                 mapped for this clinic.
                             </div>
+
                         </div>
                     ) : (
                         preferences.map(
                             (preference) => (
                                 <div
                                     className="table-row"
-                                    key={preference.id}
+                                    key={
+                                        preference.id
+                                    }
                                 >
+
                                     <div className="event-title">
                                         {
                                             preference.notificationEvent
@@ -442,6 +782,7 @@ function Preferences() {
                                     </div>
 
                                     <div>
+
                                         <button
                                             type="button"
                                             className={`toggle ${
@@ -459,9 +800,11 @@ function Preferences() {
                                         >
                                             <span className="toggle-circle" />
                                         </button>
+
                                     </div>
 
                                     <div>
+
                                         <button
                                             type="button"
                                             className={`toggle ${
@@ -479,9 +822,11 @@ function Preferences() {
                                         >
                                             <span className="toggle-circle" />
                                         </button>
+
                                     </div>
 
                                     <div>
+
                                         <button
                                             type="button"
                                             className={`toggle ${
@@ -499,18 +844,26 @@ function Preferences() {
                                         >
                                             <span className="toggle-circle" />
                                         </button>
+
                                     </div>
+
                                 </div>
                             )
                         )
                     )}
+
                 </div>
+
             </section>
 
             <section className="content-card dnd-card">
+
                 <div className="dnd-content">
+
                     <div>
-                        <h2>Do Not Disturb</h2>
+                        <h2>
+                            Do Not Disturb
+                        </h2>
 
                         <p>
                             Pause notifications during
@@ -534,14 +887,19 @@ function Preferences() {
                     >
                         <span className="toggle-circle" />
                     </button>
+
                 </div>
+
             </section>
 
             <div className="page-actions">
+
                 <button
                     type="button"
                     className="button button-secondary"
-                    onClick={handleCancel}
+                    onClick={
+                        handleCancel
+                    }
                 >
                     Cancel
                 </button>
@@ -549,16 +907,21 @@ function Preferences() {
                 <button
                     type="button"
                     className="button button-primary"
-                    onClick={handleSave}
+                    onClick={
+                        handleSave
+                    }
                     disabled={
-                        saving || !selectedClinic
+                        saving ||
+                        !selectedClinic
                     }
                 >
                     {saving
                         ? "Saving..."
                         : "Save Changes"}
                 </button>
+
             </div>
+
         </div>
     );
 }

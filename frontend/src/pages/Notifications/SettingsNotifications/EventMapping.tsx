@@ -61,62 +61,29 @@ const eventTypes = [
 const pageSize = 10;
 
 function EventMapping() {
-    const [showForm, setShowForm] =
-        useState(false);
+    const [showForm, setShowForm] = useState(false);
 
-    const [dropdownOpen, setDropdownOpen] =
-        useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [editingId, setEditingId] =  useState<number | null>(null);
+    const [editingMapping, setEditingMapping] = useState<Mapping | null>(null);
+    const [deleteMappingIds, setDeleteMappingIds] = useState<number[] | null>(null);
+    const [deleting, setDeleting] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
 
-    const [editingId, setEditingId] =
-        useState<number | null>(null);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
 
-    const [editingMapping, setEditingMapping] =
-        useState<Mapping | null>(null);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [clinics, setClinics] = useState<Clinic[]>([]);
+    const [events, setEvents] = useState<NotificationEvent[]>([]);
+    const [mappings, setMappings] =  useState<Mapping[]>([]);
+    const [allMappings, setAllMappings] = useState<Mapping[]>([]);
 
-    const [deleteMappingIds, setDeleteMappingIds] =
-        useState<number[] | null>(null);
-
-    const [deleting, setDeleting] =
-        useState(false);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [search, setSearch] =
-        useState("");
-
-    const [currentPage, setCurrentPage] =
-        useState(0);
-
-    const [totalPages, setTotalPages] =
-        useState(0);
-
-    const [totalElements, setTotalElements] =
-        useState(0);
-
-    const [clients, setClients] =
-        useState<Client[]>([]);
-
-    const [clinics, setClinics] =
-        useState<Clinic[]>([]);
-
-    const [events, setEvents] =
-        useState<NotificationEvent[]>([]);
-
-    const [mappings, setMappings] =
-        useState<Mapping[]>([]);
-
-    const [allMappings, setAllMappings] =
-        useState<Mapping[]>([]);
-
-    const [client, setClient] =
-        useState("");
-
-    const [clinic, setClinic] =
-        useState("");
-
-    const [selectedEvents, setSelectedEvents] =
-        useState<SelectedEvent[]>([]);
+    const [client, setClient] = useState("");
+    const [clinic, setClinic] = useState("");
+    const [selectedEvents, setSelectedEvents] = useState<SelectedEvent[]>([]);
 
     const [errors, setErrors] =
         useState({
@@ -159,12 +126,10 @@ function EventMapping() {
             eventTypes: [type],
             clientId: item.clientId,
             client:
-                item.clientName ||
-                "Unknown Client",
+                item.clientName || "Unknown Client",
             clinicId: item.clinicId,
             clinic:
-                item.clinicName ||
-                "Unknown Clinic",
+                item.clinicName || "Unknown Clinic",
         };
     };
 
@@ -1741,9 +1706,7 @@ function EventMapping() {
                                     deleting
                                 }
                             >
-                                {deleting
-                                    ? "Deleting..."
-                                    : "Delete"}
+                                {deleting ? "Deleting..." : "Delete"}
                             </button>
 
                         </div>
