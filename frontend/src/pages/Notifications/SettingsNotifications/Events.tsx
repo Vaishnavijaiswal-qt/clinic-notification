@@ -24,14 +24,20 @@ function Events() {
     const [totalElements, setTotalElements] = useState(0);
 
     const [showForm, setShowForm] = useState(false);
-    const [editingEvent, setEditingEvent] = useState<NotificationEvent | null>(null);
+    const [editingEvent, setEditingEvent] =
+        useState<NotificationEvent | null>(null);
 
     const [eventName, setEventName] = useState("");
     const [description, setDescription] = useState("");
 
+    const [eventNameError, setEventNameError] = useState("");
+    const [descriptionError, setDescriptionError] = useState("");
+
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [deleteId, setDeleteId] = useState<number | null>(null);
+
+    const [toast, setToast] = useState("");
 
     const loadEvents = async (
         searchValue = search,
@@ -104,14 +110,24 @@ function Events() {
         };
     }, [search, currentPage]);
 
+    useEffect(() => {
+        if (!toast) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setToast("");
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [toast]);
+
     const handleSearch = () => {
-        setLoading(true);
         setCurrentPage(0);
         setSearch(searchInput.trim());
     };
 
     const handleReset = () => {
-        setLoading(true);
         setSearchInput("");
         setSearch("");
         setCurrentPage(0);
@@ -122,7 +138,6 @@ function Events() {
             return;
         }
 
-        setLoading(true);
         setCurrentPage(page);
     };
 
@@ -130,6 +145,9 @@ function Events() {
         setEditingEvent(null);
         setEventName("");
         setDescription("");
+        setEventNameError("");
+        setDescriptionError("");
+        setToast("");
         setShowForm(true);
     };
 
@@ -137,6 +155,9 @@ function Events() {
         setEditingEvent(event);
         setEventName(event.eventName);
         setDescription(event.description);
+        setEventNameError("");
+        setDescriptionError("");
+        setToast("");
         setShowForm(true);
     };
 
@@ -149,16 +170,65 @@ function Events() {
         setEditingEvent(null);
         setEventName("");
         setDescription("");
+        setEventNameError("");
+        setDescriptionError("");
     };
 
+    const validateForm = () => {
+    const name = eventName.trim();
+    const details = description.trim();
+
+    let valid = true;
+
+    setEventNameError("");
+    setDescriptionError("");
+
+    if (!name) {
+        setEventNameError("Event name is required.");
+        valid = false;
+    } else if (name.length < 2) {
+        setEventNameError(
+            "Event name must be at least 2 characters."
+        );
+        valid = false;
+    } else if (name.length > 100) {
+        setEventNameError(
+            "Event name must not exceed 100 characters."
+        );
+        valid = false;
+    } else if (!/^[A-Za-z]/.test(name)) {
+        setEventNameError(
+            "Event name must start with a letter."
+        );
+        valid = false;
+    } else if (!/^[A-Za-z][A-Za-z0-9\s'-]*$/.test(name)) {
+        setEventNameError(
+            "Event name contains invalid characters."
+        );
+        valid = false;
+    }
+
+    if (!details) {
+        setDescriptionError("Description is required.");
+        valid = false;
+    } else if (details.length > 500) {
+        setDescriptionError(
+            "Description must not exceed 500 characters."
+        );
+        valid = false;
+    }
+
+    return valid;
+};
+
     const handleSave = async () => {
-        if (!eventName.trim() || !description.trim()) 
-        {
+        if (!validateForm()) {
             return;
         }
 
         try {
             setSaving(true);
+            setToast("");
 
             const payload = {
                 eventName: eventName.trim(),
@@ -178,6 +248,8 @@ function Events() {
             setEditingEvent(null);
             setEventName("");
             setDescription("");
+            setEventNameError("");
+            setDescriptionError("");
 
             await loadEvents(
                 search,
@@ -186,9 +258,25 @@ function Events() {
         } catch (error) {
             console.error("Failed to save event:", error);
 
-            const message = error instanceof Error ? error.message : "Failed to save event";
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to save event";
 
-            alert(message);
+            if (
+                message.toLowerCase().includes("already exists") ||
+                message.toLowerCase().includes("event already exists")
+            ) {
+                setShowForm(false);
+                setEditingEvent(null);
+                setEventName("");
+                setDescription("");
+                setEventNameError("");
+                setDescriptionError("");
+                setToast("Event already exists.");
+            } else {
+                setToast(message);
+            }
         } finally {
             setSaving(false);
         }
@@ -242,7 +330,7 @@ function Events() {
                     ? error.message
                     : "Failed to delete event";
 
-            alert(message);
+            setToast(message);
         } finally {
             setDeletingId(null);
         }
@@ -250,12 +338,28 @@ function Events() {
 
     return (
         <>
+            {toast && (
+                <div className="event-toast" role="alert">
+                    <span>{toast}</span>
+
+                    <button
+                        type="button"
+                        onClick={() => setToast("")}
+                        aria-label="Close notification"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
             <div className="events-page">
                 <div className="page-header">
                     <div>
                         <h2>Events</h2>
 
-                        <p>Manage notification events used across the system.</p>
+                        <p>
+                            Manage notification events used across the system.
+                        </p>
                     </div>
 
                     <button
@@ -358,22 +462,25 @@ function Events() {
                                                         handleEdit(event)
                                                     }
                                                     title="Edit"
+                                                    aria-label={`Edit ${event.eventName}`}
                                                 >
-                                                    <Pencil
-                                                        size={17}
-                                                    />
+                                                    <Pencil size={17} />
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     className="icon-button delete-button"
                                                     onClick={() =>
-                                                        handleDeleteClick(event.id)
+                                                        handleDeleteClick(
+                                                            event.id
+                                                        )
                                                     }
                                                     disabled={
-                                                        deletingId === event.id
+                                                        deletingId ===
+                                                        event.id
                                                     }
                                                     title="Delete"
+                                                    aria-label={`Delete ${event.eventName}`}
                                                 >
                                                     <Trash2 size={17} />
                                                 </button>
@@ -428,7 +535,9 @@ function Events() {
                                             type="button"
                                             className={
                                                 currentPage ===
-                                                index ? "active" : ""
+                                                index
+                                                    ? "active"
+                                                    : ""
                                             }
                                             onClick={() =>
                                                 handlePageChange(
@@ -466,11 +575,15 @@ function Events() {
                         <div className="event-form-header">
                             <div>
                                 <span className="event-form-label">
-                                    {editingEvent ? "EDIT EVENT" : "NEW EVENT"}
+                                    {editingEvent
+                                        ? "EDIT EVENT"
+                                        : "NEW EVENT"}
                                 </span>
 
                                 <h3>
-                                    {editingEvent ? "Edit Notification Event" : "Add Notification Event"}
+                                    {editingEvent
+                                        ? "Edit Notification Event"
+                                        : "Add Notification Event"}
                                 </h3>
                             </div>
 
@@ -479,6 +592,7 @@ function Events() {
                                 className="close-button"
                                 onClick={handleCloseForm}
                                 disabled={saving}
+                                aria-label="Close form"
                             >
                                 ×
                             </button>
@@ -486,33 +600,93 @@ function Events() {
 
                         <div className="event-form">
                             <div className="form-group">
-                                <label htmlFor="eventName"> Event Name </label>
+                                <label htmlFor="eventName">
+                                    Event Name{" "}
+                                    <span className="required-mark">
+                                        *
+                                    </span>
+                                </label>
 
                                 <input
                                     id="eventName"
                                     type="text"
                                     value={eventName}
-                                    onChange={(event) =>
-                                        setEventName(event.target.value)
+                                    maxLength={100}
+                                    aria-invalid={
+                                        !!eventNameError
                                     }
+                                    aria-describedby={
+                                        eventNameError
+                                            ? "eventNameError"
+                                            : undefined
+                                    }
+                                    onChange={(event) => {
+                                        setEventName(
+                                            event.target.value
+                                        );
+
+                                        if (eventNameError) {
+                                            setEventNameError("");
+                                        }
+                                    }}
                                     placeholder="Enter event name"
                                 />
+
+                                {eventNameError && (
+                                    <p
+                                        id="eventNameError"
+                                        className="form-error"
+                                    >
+                                        {eventNameError}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="description">Description</label>
+                                <label htmlFor="description">
+                                    Description{" "}
+                                    <span className="required-mark">
+                                        *
+                                    </span>
+                                </label>
 
                                 <textarea
                                     id="description"
                                     value={description}
-                                    onChange={(event) =>
+                                    maxLength={500}
+                                    aria-invalid={
+                                        !!descriptionError
+                                    }
+                                    aria-describedby={
+                                        descriptionError
+                                            ? "descriptionError"
+                                            : undefined
+                                    }
+                                    onChange={(event) => {
                                         setDescription(
                                             event.target.value
-                                        )
-                                    }
+                                        );
+
+                                        if (descriptionError) {
+                                            setDescriptionError("");
+                                        }
+                                    }}
                                     placeholder="Enter event description"
                                     rows={4}
                                 />
+
+                                <div className="character-count">
+                                    {description.length}/500
+                                </div>
+
+                                {descriptionError && (
+                                    <p
+                                        id="descriptionError"
+                                        className="form-error"
+                                    >
+                                        {descriptionError}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="form-actions">
@@ -529,11 +703,7 @@ function Events() {
                                     type="button"
                                     className="primary-button"
                                     onClick={handleSave}
-                                    disabled={
-                                        saving ||
-                                        !eventName.trim() ||
-                                        !description.trim()
-                                    }
+                                    disabled={saving}
                                 >
                                     {saving
                                         ? "Saving..."
@@ -551,9 +721,13 @@ function Events() {
                 <div className="delete-confirmation">
                     <div className="delete-confirmation-card">
                         <div className="delete-confirmation-header">
-                            <h2>Delete Notification Event?</h2>
+                            <h2>
+                                Delete Notification Event?
+                            </h2>
 
-                            <p>Are you sure you want to delete this notification event?</p>
+                            <p>
+                                Are you sure you want to delete this notification event?
+                            </p>
                         </div>
 
                         <div className="delete-confirmation-actions">
@@ -576,7 +750,9 @@ function Events() {
                                     deletingId !== null
                                 }
                             >
-                                {deletingId !== null ? "Deleting..." : "Delete"}
+                                {deletingId !== null
+                                    ? "Deleting..."
+                                    : "Delete"}
                             </button>
                         </div>
                     </div>

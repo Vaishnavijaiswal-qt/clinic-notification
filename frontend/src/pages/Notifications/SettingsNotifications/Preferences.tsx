@@ -24,10 +24,13 @@ import type {
     NotificationEvent,
 } from "../../../api/eventsApi";
 
-type PreferenceRow =
-    NotificationPreference & {
-        id: number;
-    };
+type PreferenceRow = NotificationPreference & {
+    id: number;
+    event: string;
+    whatsappAvailable: boolean;
+    smsAvailable: boolean;
+    emailAvailable: boolean;
+};
 
 function Preferences() {
     const [clients, setClients] =
@@ -74,31 +77,14 @@ function Preferences() {
     const [error, setError] =
         useState("");
 
-    /*
-     * Load clients
-     */
     useEffect(() => {
         const loadClients = async () => {
             try {
-                setLoadingClients(true);
-                setError("");
-
                 const data =
                     await getClients();
 
-                setClients(
-                    Array.isArray(data)
-                        ? data
-                        : []
-                );
-            } catch (error) {
-                console.error(
-                    "Failed to load clients:",
-                    error
-                );
-
-                setClients([]);
-
+                setClients(data);
+            } catch {
                 setError(
                     "Failed to load clients."
                 );
@@ -110,15 +96,10 @@ function Preferences() {
         loadClients();
     }, []);
 
-    /*
-     * Load notification mappings
-     * and notification events
-     */
     useEffect(() => {
         const loadEventData = async () => {
             try {
                 setLoadingEvents(true);
-                setError("");
 
                 const [
                     mappingResponse,
@@ -127,9 +108,8 @@ function Preferences() {
                     getEventMappings(
                         "",
                         0,
-                        1000
+                        10
                     ),
-
                     getEvents(
                         "",
                         0,
@@ -137,62 +117,19 @@ function Preferences() {
                     ),
                 ]);
 
-                /*
-                 * Event Mapping API returns:
-                 *
-                 * {
-                 *   content: [...],
-                 *   pagination: {...}
-                 * }
-                 *
-                 * We only need content here.
-                 */
-                const mappingList =
+                const mappingData =
                     Array.isArray(
                         mappingResponse
                     )
                         ? mappingResponse
-                        : Array.isArray(
-                              mappingResponse?.content
-                          )
-                        ? mappingResponse.content
-                        : [];
+                        : mappingResponse.content;
 
-                /*
-                 * Events API returns:
-                 *
-                 * {
-                 *   content: [...],
-                 *   ...
-                 * }
-                 */
-                const eventList =
-                    Array.isArray(
-                        eventResponse
-                    )
-                        ? eventResponse
-                        : Array.isArray(
-                              eventResponse?.content
-                          )
-                        ? eventResponse.content
-                        : [];
+                const eventData =
+                    eventResponse.content;
 
-                setMappings(
-                    mappingList
-                );
-
-                setEvents(
-                    eventList
-                );
-            } catch (error) {
-                console.error(
-                    "Failed to load notification events:",
-                    error
-                );
-
-                setMappings([]);
-                setEvents([]);
-
+                setMappings(mappingData);
+                setEvents(eventData);
+            } catch {
                 setError(
                     "Failed to load notification events."
                 );
@@ -204,172 +141,142 @@ function Preferences() {
         loadEventData();
     }, []);
 
-    /*
-     * Build preferences for
-     * selected client + clinic
-     */
-    const preferences =
-        useMemo<PreferenceRow[]>(
-            () => {
-                if (
-                    !selectedClient ||
-                    !selectedClinic
-                ) {
-                    return [];
+    const preferences = useMemo<
+        PreferenceRow[]
+    >(() => {
+        if (
+            !selectedClient ||
+            !selectedClinic
+        ) {
+            return [];
+        }
+
+        const clientId =
+            Number(selectedClient);
+
+        const clinicId =
+            Number(selectedClinic);
+
+        const grouped =
+            new Map<
+                number,
+                PreferenceRow
+            >();
+
+        mappings
+            .filter(
+                (mapping) =>
+                    mapping.clientId ===
+                        clientId &&
+                    mapping.clinicId ===
+                        clinicId
+            )
+            .forEach((mapping) => {
+                const event =
+                    events.find(
+                        (item) =>
+                            item.id ===
+                            mapping.eventId
+                    );
+
+                if (!event) {
+                    return;
                 }
 
-                const clientId =
-                    Number(
-                        selectedClient
-                    );
-
-                const clinicId =
-                    Number(
-                        selectedClinic
-                    );
-
-                const grouped =
-                    new Map<
-                        number,
-                        PreferenceRow
-                    >();
-
-                /*
-                 * Extra safety:
-                 * always work with an array.
-                 */
-                const mappingList =
-                    Array.isArray(
-                        mappings
+                if (
+                    !grouped.has(
+                        mapping.eventId
                     )
-                        ? mappings
-                        : [];
-
-                mappingList
-                    .filter(
-                        (mapping) =>
-                            mapping.clientId ===
-                                clientId &&
-                            mapping.clinicId ===
-                                clinicId
-                    )
-                    .forEach(
-                        (mapping) => {
-                            const event =
-                                events.find(
-                                    (item) =>
-                                        item.id ===
-                                        mapping.eventId
-                                );
-
-                            if (!event) {
-                                return;
-                            }
-
-                            if (
-                                !grouped.has(
-                                    mapping.eventId
-                                )
-                            ) {
-                                grouped.set(
-                                    mapping.eventId,
-                                    {
-                                        id: mapping.eventId,
-
-                                        notificationEvent:
-                                            event.eventName,
-
-                                        whatsappEnabled:
-                                            false,
-
-                                        smsEnabled:
-                                            false,
-
-                                        emailEnabled:
-                                            false,
-                                    }
-                                );
-                            }
-
-                            const current =
-                                grouped.get(
-                                    mapping.eventId
-                                );
-
-                            if (!current) {
-                                return;
-                            }
-
-                            if (
-                                mapping.notificationType ===
-                                "WHATSAPP"
-                            ) {
-                                current.whatsappEnabled =
-                                    true;
-                            }
-
-                            if (
-                                mapping.notificationType ===
-                                "SMS"
-                            ) {
-                                current.smsEnabled =
-                                    true;
-                            }
-
-                            if (
-                                mapping.notificationType ===
-                                "EMAIL"
-                            ) {
-                                current.emailEnabled =
-                                    true;
-                            }
+                ) {
+                    grouped.set(
+                        mapping.eventId,
+                        {
+                            id: mapping.eventId,
+                            event:
+                                event.eventName,
+                            notificationEvent:
+                                event.eventName,
+                            whatsappEnabled:
+                                false,
+                            smsEnabled:
+                                false,
+                            emailEnabled:
+                                false,
+                            whatsappAvailable:
+                                false,
+                            smsAvailable:
+                                false,
+                            emailAvailable:
+                                false,
                         }
                     );
+                }
 
-                return Array.from(
-                    grouped.values()
-                ).map(
-                    (preference) => ({
-                        ...preference,
+                const current =
+                    grouped.get(
+                        mapping.eventId
+                    )!;
 
-                        ...preferenceChanges[
-                            preference.id
-                        ],
-                    })
-                );
-            },
-            [
-                selectedClient,
-                selectedClinic,
-                mappings,
-                events,
-                preferenceChanges,
-            ]
-        );
+                if (
+                    mapping.notificationType ===
+                    "WHATSAPP"
+                ) {
+                    current.whatsappAvailable =
+                        true;
 
-    /*
-     * Client change
-     */
+                    current.whatsappEnabled =
+                        true;
+                }
+
+                if (
+                    mapping.notificationType ===
+                    "SMS"
+                ) {
+                    current.smsAvailable =
+                        true;
+
+                    current.smsEnabled =
+                        true;
+                }
+
+                if (
+                    mapping.notificationType ===
+                    "EMAIL"
+                ) {
+                    current.emailAvailable =
+                        true;
+
+                    current.emailEnabled =
+                        true;
+                }
+            });
+
+        return Array.from(
+            grouped.values()
+        ).map((preference) => ({
+            ...preference,
+            ...preferenceChanges[
+                preference.id
+            ],
+        }));
+    }, [
+        selectedClient,
+        selectedClinic,
+        mappings,
+        events,
+        preferenceChanges,
+    ]);
+
     const handleClientChange = async (
         event: React.ChangeEvent<HTMLSelectElement>
     ) => {
         const clientId =
             event.target.value;
 
-        setSelectedClient(
-            clientId
-        );
-
-        /*
-         * Clinic must be reset
-         * when client changes.
-         */
+        setSelectedClient(clientId);
         setSelectedClinic("");
-
         setClinics([]);
-
         setPreferenceChanges({});
-
         setError("");
 
         if (!clientId) {
@@ -384,32 +291,16 @@ function Preferences() {
                     Number(clientId)
                 );
 
-            setClinics(
-                Array.isArray(data)
-                    ? data
-                    : []
-            );
-        } catch (error) {
-            console.error(
-                "Failed to load clinics:",
-                error
-            );
-
-            setClinics([]);
-
+            setClinics(data);
+        } catch {
             setError(
                 "Failed to load clinics."
             );
         } finally {
-            setLoadingClinics(
-                false
-            );
+            setLoadingClinics(false);
         }
     };
 
-    /*
-     * Clinic change
-     */
     const handleClinicChange = (
         event: React.ChangeEvent<HTMLSelectElement>
     ) => {
@@ -418,13 +309,9 @@ function Preferences() {
         );
 
         setPreferenceChanges({});
-
         setError("");
     };
 
-    /*
-     * Toggle WhatsApp / SMS / Email
-     */
     const handleToggle = (
         id: number,
         channel:
@@ -442,13 +329,34 @@ function Preferences() {
             return;
         }
 
+        if (
+            channel ===
+                "whatsappEnabled" &&
+            !currentPreference.whatsappAvailable
+        ) {
+            return;
+        }
+
+        if (
+            channel === "smsEnabled" &&
+            !currentPreference.smsAvailable
+        ) {
+            return;
+        }
+
+        if (
+            channel ===
+                "emailEnabled" &&
+            !currentPreference.emailAvailable
+        ) {
+            return;
+        }
+
         setPreferenceChanges(
             (current) => ({
                 ...current,
-
                 [id]: {
                     ...current[id],
-
                     [channel]:
                         !currentPreference[
                             channel
@@ -458,9 +366,6 @@ function Preferences() {
         );
     };
 
-    /*
-     * Save preferences
-     */
     const handleSave = async () => {
         if (
             !selectedClient ||
@@ -469,7 +374,6 @@ function Preferences() {
             setError(
                 "Please select a client and clinic."
             );
-
             return;
         }
 
@@ -479,76 +383,36 @@ function Preferences() {
 
             await savePreferences({
                 clientId:
-                    Number(
-                        selectedClient
-                    ),
-
+                    Number(selectedClient),
                 clinicId:
-                    Number(
-                        selectedClinic
-                    ),
-
+                    Number(selectedClinic),
                 preferences:
                     preferences.map(
-                        (preference) => {
-                            let notificationEvent =
-                                "";
-
-                            if (
-                                preference.notificationEvent ===
-                                "Patient Registration"
-                            ) {
-                                notificationEvent =
-                                    "PATIENT_REGISTRATION";
-                            } else if (
-                                preference.notificationEvent ===
-                                "Patient Appointment"
-                            ) {
-                                notificationEvent =
-                                    "PATIENT_APPOINTMENT";
-                            } else if (
-                                preference.notificationEvent ===
-                                "Appointment Rescheduled"
-                            ) {
-                                notificationEvent =
-                                    "APPOINTMENT_RESCHEDULED";
-                            } else if (
-                                preference.notificationEvent ===
-                                "Appointment Cancelled"
-                            ) {
-                                notificationEvent =
-                                    "APPOINTMENT_CANCELLED";
-                            }
-
-                            return {
-                                notificationEvent,
-
-                                whatsappEnabled:
-                                    preference.whatsappEnabled,
-
-                                smsEnabled:
-                                    preference.smsEnabled,
-
-                                emailEnabled:
-                                    preference.emailEnabled,
-                            };
-                        }
+                        (preference) => ({
+                            notificationEvent:
+                                preference.notificationEvent,
+                            whatsappEnabled:
+                                preference.whatsappAvailable
+                                    ? preference.whatsappEnabled
+                                    : false,
+                            smsEnabled:
+                                preference.smsAvailable
+                                    ? preference.smsEnabled
+                                    : false,
+                            emailEnabled:
+                                preference.emailAvailable
+                                    ? preference.emailEnabled
+                                    : false,
+                        })
                     ),
             });
 
-            setPreferenceChanges(
-                {}
-            );
+            setPreferenceChanges({});
 
             alert(
                 "Notification preferences saved successfully."
             );
-        } catch (error) {
-            console.error(
-                "Failed to save notification preferences:",
-                error
-            );
-
+        } catch {
             setError(
                 "Failed to save notification preferences."
             );
@@ -557,25 +421,17 @@ function Preferences() {
         }
     };
 
-    /*
-     * Cancel / reset
-     */
     const handleCancel = () => {
         setSelectedClient("");
         setSelectedClinic("");
-
         setClinics([]);
-
         setPreferenceChanges({});
-
         setDoNotDisturb(false);
-
         setError("");
     };
 
     return (
         <div className="page-container">
-
             <div className="page-header">
                 <div>
                     <h1>
@@ -583,14 +439,12 @@ function Preferences() {
                     </h1>
 
                     <p>
-                        Manage how notifications are
-                        delivered across your clinics.
+                        Manage how notifications are delivered across your clinics.
                     </p>
                 </div>
             </div>
 
             <section className="content-card">
-
                 <div className="card-header">
                     <div>
                         <h2>
@@ -598,15 +452,12 @@ function Preferences() {
                         </h2>
 
                         <p>
-                            Select the client and clinic
-                            for which you want to configure
-                            notification preferences.
+                            Select the client and clinic for which you want to configure notification preferences.
                         </p>
                     </div>
                 </div>
 
                 <div className="form-grid">
-
                     <div className="form-field">
                         <label>
                             Client
@@ -672,7 +523,7 @@ function Preferences() {
                             </option>
 
                             {clinics.map(
-                                (clinic) => (
+                                (clinic: Clinic) => (
                                     <option
                                         key={
                                             clinic.id
@@ -689,19 +540,16 @@ function Preferences() {
                             )}
                         </select>
                     </div>
-
                 </div>
-
             </section>
 
             {error && (
-                <p className="error-message">
+                <p className="form-error">
                     {error}
                 </p>
             )}
 
             <section className="content-section">
-
                 <div className="section-header">
                     <div>
                         <h2>
@@ -709,17 +557,13 @@ function Preferences() {
                         </h2>
 
                         <p>
-                            Control which communication
-                            channels are enabled for each
-                            notification event.
+                            Control which communication channels are enabled for each notification event.
                         </p>
                     </div>
                 </div>
 
                 <div className="table-card">
-
                     <div className="table-header">
-
                         <div>
                             Notification Event
                         </div>
@@ -735,35 +579,26 @@ function Preferences() {
                         <div>
                             Email
                         </div>
-
                     </div>
 
                     {!selectedClinic ? (
                         <div className="table-row">
-
                             <div>
-                                Select a clinic to configure
-                                notification preferences.
+                                Select a clinic to configure notification preferences.
                             </div>
-
                         </div>
                     ) : loadingEvents ? (
                         <div className="table-row">
-
                             <div>
-                                Loading notification
-                                events...
+                                Loading notification events...
                             </div>
-
                         </div>
-                    ) : preferences.length === 0 ? (
+                    ) : preferences.length ===
+                      0 ? (
                         <div className="table-row">
-
                             <div>
-                                No notification events are
-                                mapped for this clinic.
+                                No notification events are mapped for this clinic.
                             </div>
-
                         </div>
                     ) : (
                         preferences.map(
@@ -774,20 +609,25 @@ function Preferences() {
                                         preference.id
                                     }
                                 >
-
                                     <div className="event-title">
                                         {
-                                            preference.notificationEvent
+                                            preference.event
                                         }
                                     </div>
 
                                     <div>
-
                                         <button
                                             type="button"
+                                            disabled={
+                                                !preference.whatsappAvailable
+                                            }
                                             className={`toggle ${
                                                 preference.whatsappEnabled
                                                     ? "toggle-on"
+                                                    : ""
+                                            } ${
+                                                !preference.whatsappAvailable
+                                                    ? "toggle-disabled"
                                                     : ""
                                             }`}
                                             onClick={() =>
@@ -796,20 +636,25 @@ function Preferences() {
                                                     "whatsappEnabled"
                                                 )
                                             }
-                                            aria-label={`Toggle WhatsApp for ${preference.notificationEvent}`}
+                                            aria-label={`Toggle WhatsApp for ${preference.event}`}
                                         >
                                             <span className="toggle-circle" />
                                         </button>
-
                                     </div>
 
                                     <div>
-
                                         <button
                                             type="button"
+                                            disabled={
+                                                !preference.smsAvailable
+                                            }
                                             className={`toggle ${
                                                 preference.smsEnabled
                                                     ? "toggle-on"
+                                                    : ""
+                                            } ${
+                                                !preference.smsAvailable
+                                                    ? "toggle-disabled"
                                                     : ""
                                             }`}
                                             onClick={() =>
@@ -818,20 +663,25 @@ function Preferences() {
                                                     "smsEnabled"
                                                 )
                                             }
-                                            aria-label={`Toggle SMS for ${preference.notificationEvent}`}
+                                            aria-label={`Toggle SMS for ${preference.event}`}
                                         >
                                             <span className="toggle-circle" />
                                         </button>
-
                                     </div>
 
                                     <div>
-
                                         <button
                                             type="button"
+                                            disabled={
+                                                !preference.emailAvailable
+                                            }
                                             className={`toggle ${
                                                 preference.emailEnabled
                                                     ? "toggle-on"
+                                                    : ""
+                                            } ${
+                                                !preference.emailAvailable
+                                                    ? "toggle-disabled"
                                                     : ""
                                             }`}
                                             onClick={() =>
@@ -840,34 +690,27 @@ function Preferences() {
                                                     "emailEnabled"
                                                 )
                                             }
-                                            aria-label={`Toggle Email for ${preference.notificationEvent}`}
+                                            aria-label={`Toggle Email for ${preference.event}`}
                                         >
                                             <span className="toggle-circle" />
                                         </button>
-
                                     </div>
-
                                 </div>
                             )
                         )
                     )}
-
                 </div>
-
             </section>
 
             <section className="content-card dnd-card">
-
                 <div className="dnd-content">
-
                     <div>
                         <h2>
                             Do Not Disturb
                         </h2>
 
                         <p>
-                            Pause notifications during
-                            specific hours.
+                            Pause notifications during specific hours.
                         </p>
                     </div>
 
@@ -887,13 +730,10 @@ function Preferences() {
                     >
                         <span className="toggle-circle" />
                     </button>
-
                 </div>
-
             </section>
 
             <div className="page-actions">
-
                 <button
                     type="button"
                     className="button button-secondary"
@@ -919,9 +759,7 @@ function Preferences() {
                         ? "Saving..."
                         : "Save Changes"}
                 </button>
-
             </div>
-
         </div>
     );
 }

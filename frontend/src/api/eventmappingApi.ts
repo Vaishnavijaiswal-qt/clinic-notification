@@ -45,7 +45,7 @@ export type UpdateEventMappingRequest = {
     clientId: number;
     clinicId: number;
     eventId: number;
-    notificationType: NotificationType;
+    notificationTypes: NotificationType[];
 };
 
 export async function getEventMappings(
@@ -62,15 +62,8 @@ export async function getEventMappings(
         );
     }
 
-    params.set(
-        "page",
-        String(page)
-    );
-
-    params.set(
-        "size",
-        String(size)
-    );
+    params.set("page",String(page));
+    params.set("size",String(size));
 
     const response = await fetch(
         `${API_BASE_URL}/event-mappings?${params.toString()}`,
@@ -120,8 +113,7 @@ export async function updateEventMapping(
         {
             method: "PUT",
             headers: {
-                "Content-Type":
-                    "application/json",
+                "Content-Type": "application/json",
             },
             credentials: "include",
             body: JSON.stringify(data),
