@@ -1,3 +1,4 @@
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export type NotificationType =
@@ -13,7 +14,20 @@ export type EventMapping = {
     clinicName: string;
     eventId: number;
     eventName: string | null;
-    notificationType: NotificationType;
+    notificationTypes: NotificationType[];
+};
+
+export type EventMappingCreateResponse = {
+    clientId: number;
+    clientName: string;
+    clinicId: number;
+    clinicName: string;
+    mappings: {
+        id: number;
+        eventId: number;
+        eventName: string | null;
+        notificationTypes: NotificationType[];
+    }[];
 };
 
 export type EventMappingPagination = {
@@ -56,14 +70,11 @@ export async function getEventMappings(
     const params = new URLSearchParams();
 
     if (search.trim()) {
-        params.set(
-            "search",
-            search.trim()
-        );
+        params.set("search", search.trim());
     }
 
-    params.set("page",String(page));
-    params.set("size",String(size));
+    params.set("page", String(page));
+    params.set("size", String(size));
 
     const response = await fetch(
         `${API_BASE_URL}/event-mappings?${params.toString()}`,
@@ -73,9 +84,7 @@ export async function getEventMappings(
     );
 
     if (!response.ok) {
-        throw new Error(
-            "Failed to fetch event mappings"
-        );
+        throw new Error("Failed to fetch event mappings");
     }
 
     return response.json();
@@ -83,14 +92,13 @@ export async function getEventMappings(
 
 export async function createEventMapping(
     data: EventMappingRequest
-): Promise<void> {
+): Promise<EventMappingCreateResponse> {
     const response = await fetch(
         `${API_BASE_URL}/event-mappings`,
         {
             method: "POST",
             headers: {
-                "Content-Type":
-                    "application/json",
+                "Content-Type": "application/json",
             },
             credentials: "include",
             body: JSON.stringify(data),
@@ -98,16 +106,16 @@ export async function createEventMapping(
     );
 
     if (!response.ok) {
-        throw new Error(
-            "Failed to create event mapping"
-        );
+        throw new Error("Failed to create event mapping");
     }
+
+    return response.json();
 }
 
 export async function updateEventMapping(
     id: number,
     data: UpdateEventMappingRequest
-): Promise<void> {
+): Promise<unknown> {
     const response = await fetch(
         `${API_BASE_URL}/event-mappings/${id}`,
         {
@@ -121,10 +129,10 @@ export async function updateEventMapping(
     );
 
     if (!response.ok) {
-        throw new Error(
-            "Failed to update event mapping"
-        );
+        throw new Error("Failed to update event mapping");
     }
+
+    return response.json();
 }
 
 export async function deleteEventMapping(
@@ -139,8 +147,6 @@ export async function deleteEventMapping(
     );
 
     if (!response.ok) {
-        throw new Error(
-            "Failed to delete event mapping"
-        );
+        throw new Error("Failed to delete event mapping");
     }
 }

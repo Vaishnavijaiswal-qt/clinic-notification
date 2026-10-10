@@ -24,12 +24,9 @@ export type SavePreferencesRequest = {
 };
 
 export async function getClients(): Promise<Client[]> {
-    const response = await fetch(
-        `${API_BASE_URL}/clients`,
-        {
-            credentials: "include",
-        }
-    );
+    const response = await fetch(`${API_BASE_URL}/clients`, {
+        credentials: "include",
+    });
 
     if (!response.ok) {
         throw new Error("Failed to fetch clients");
@@ -55,6 +52,40 @@ export async function getClinics(
     return response.json();
 }
 
+export async function getSavedPreferences(
+    clinicId: number
+): Promise<NotificationPreference[]> {
+    const response = await fetch(
+        `${API_BASE_URL}/notification-preferences?clinicId=${clinicId}`,
+        {
+            credentials: "include",
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch saved preferences");
+    }
+
+    const data = await response.json();
+
+    // Supports either a direct array or a wrapped response.
+    if (Array.isArray(data)) {
+        return data;
+    }
+
+    if (Array.isArray(data.preferences)) {
+        return data.preferences;
+    }
+
+    if (Array.isArray(data.content)) {
+        return data.content;
+    }
+
+    throw new Error(
+        "Unexpected saved preferences API response format"
+    );
+}
+
 export async function savePreferences(
     data: SavePreferencesRequest
 ): Promise<void> {
@@ -71,8 +102,7 @@ export async function savePreferences(
     );
 
     if (!response.ok) {
-        const errorMessage =
-            await response.text();
+        const errorMessage = await response.text();
 
         console.error(
             "Save preferences API error:",
@@ -81,8 +111,7 @@ export async function savePreferences(
         );
 
         throw new Error(
-            errorMessage ||
-            "Failed to save preferences"
+            errorMessage || "Failed to save preferences"
         );
     }
 }

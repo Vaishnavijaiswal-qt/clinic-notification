@@ -1,3 +1,4 @@
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export type NotificationType = "WHATSAPP" | "SMS" | "EMAIL";
@@ -8,6 +9,8 @@ export type Template = {
     notificationType: NotificationType;
     subject: string | null;
     message: string;
+    createdAt: string | null;
+    updatedAt: string | null;
 };
 
 export type CreateTemplateRequest = {
@@ -17,95 +20,68 @@ export type CreateTemplateRequest = {
     message: string;
 };
 
-export const getTemplates = async (): Promise<Template[]> => {
-    const response = await fetch(`${API_BASE_URL}/templates`, {
+const request = async <T>(
+    endpoint: string,
+    options?: RequestInit
+): Promise<T> => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
         credentials: "include",
+        headers: {
+            ...(options?.body ? { "Content-Type": "application/json" } : {}),
+            ...options?.headers,
+        },
     });
 
     if (!response.ok) {
-        throw new Error("Failed to fetch templates");
+        const errorMessage = await response.text();
+        throw new Error(errorMessage || `Request failed: ${response.status}`);
     }
 
-    return response.json();
+    if (response.status === 204) {
+        return undefined as T;
+    }
+
+    return response.json() as Promise<T>;
 };
 
-export const getTemplatesByEvent = async (
+export const getTemplates = (): Promise<Template[]> => {
+    return request<Template[]>("/templates");
+};
+
+export const getTemplatesByEvent = (
     event: string
 ): Promise<Template[]> => {
-    const response = await fetch(
-        `${API_BASE_URL}/templates/event/${encodeURIComponent(event)}`,
-        {
-            credentials: "include",
-        }
+    return request<Template[]>(
+        `/templates/event/${encodeURIComponent(event)}`
     );
-
-    if (!response.ok) {
-        throw new Error("Failed to fetch templates by event");
-    }
-
-    return response.json();
 };
 
-export const getTemplateById = async (
-    id: number
-): Promise<Template> => {
-    const response = await fetch(`${API_BASE_URL}/templates/${id}`, {
-        credentials: "include",
-    });
-
-    if (!response.ok) {
-        throw new Error("Failed to fetch template");
-    }
-
-    return response.json();
+export const getTemplateById = (id: number): Promise<Template> => {
+    return request<Template>(`/templates/${id}`);
 };
 
-export const createTemplate = async (
+export const createTemplate = (
     template: CreateTemplateRequest
 ): Promise<Template> => {
-    const response = await fetch(`${API_BASE_URL}/templates`, {
+    return request<Template>("/templates", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify(template),
     });
-
-    if (!response.ok) {
-        throw new Error("Failed to create template");
-    }
-
-    return response.json();
 };
 
-export const updateTemplate = async (
+export const updateTemplate = (
     id: number,
     template: CreateTemplateRequest
 ): Promise<Template> => {
-    const response = await fetch(`${API_BASE_URL}/templates/${id}`, {
+    return request<Template>(`/templates/${id}`, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify(template),
     });
-
-    if (!response.ok) {
-        throw new Error("Failed to update template");
-    }
-
-    return response.json();
 };
 
-export const deleteTemplate = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/templates/${id}`, {
+export const deleteTemplate = (id: number): Promise<void> => {
+    return request<void>(`/templates/${id}`, {
         method: "DELETE",
-        credentials: "include",
     });
-
-    if (!response.ok) {
-        throw new Error("Failed to delete template");
-    }
 };
