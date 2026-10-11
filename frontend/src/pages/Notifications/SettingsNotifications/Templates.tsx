@@ -49,22 +49,8 @@ const formatEventName = (event: string) =>
 const normalizeEventName = (event: string) =>
     event.trim().toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ");
 
-const toApiEventValue = (event: string) => {
-    const value = event.trim().toLowerCase().replace(/_/g, " ").replace(/\s+/g, "_");
-
-    const eventValues: Record<string, string> = {
-        "patient_registration": "patient_registration",
-        "patient_appointment": "patient_appointment",
-        "appointment_rescheduled": "appointment_rescheduled",
-        "appointment_cancelled": "appointment_cancelled",
-        "patient registration": "patient_registration",
-        "patient appointment": "patient_appointment",
-        "appointment rescheduled": "appointment_rescheduled",
-        "appointment cancelled": "appointment_cancelled",
-    };
-
-    return eventValues[value] ?? value;
-};
+const toApiEventValue = (event: string) =>
+    event.trim().toLowerCase().replace(/ /g, "_").replace(/\s+/g, "_");
 
 const mapApiTemplates = (apiTemplates: ApiTemplate[]): EventTemplate[] => {
     const grouped = new Map<string, EventTemplate>();
@@ -83,9 +69,7 @@ const mapApiTemplates = (apiTemplates: ApiTemplate[]): EventTemplate[] => {
 
         const eventTemplate = grouped.get(eventKey);
 
-        if (!eventTemplate) {
-            return;
-        }
+        if (!eventTemplate) return;
 
         if (template.notificationType === "WHATSAPP") {
             eventTemplate.whatsapp = {
@@ -140,53 +124,52 @@ function Templates() {
     const selectedEvent =
         events.find((event) => event.id === selectedEventId) ?? null;
 
-    const selectedTemplate =
-        selectedEvent
-            ? templates.find(
-                  (template) =>
-                      normalizeEventName(template.notificationEvent) ===
-                      normalizeEventName(selectedEvent.eventName)
-              ) ?? null
-            : null;
+    const selectedTemplate = selectedEvent
+        ? templates.find(
+              (template) =>
+                  normalizeEventName(template.notificationEvent) ===
+                  normalizeEventName(selectedEvent.eventName)
+          ) ?? null
+        : null;
 
     useEffect(() => {
-    const loadInitialData = async () => {
-        try {
-            setError("");
+        const loadInitialData = async () => {
+            try {
+                setError("");
 
-            const [templateData, eventResponse] = await Promise.all([
-                getTemplates(),
-                getEvents("", 0, 100),
-            ]);
+                const [templateData, eventResponse] = await Promise.all([
+                    getTemplates(),
+                    getEvents("", 0, 1000),
+                ]);
 
-            const eventData: NotificationEvent[] = Array.isArray(eventResponse)
-                ? eventResponse
-                : (eventResponse as EventPage).content ?? [];
+                const eventData: NotificationEvent[] = Array.isArray(eventResponse)
+                    ? eventResponse
+                    : (eventResponse as EventPage)?.content ?? [];
 
-            setTemplates(mapApiTemplates(templateData));
-            setEvents(eventData);
-            setSelectedEventId(
-                eventData.length > 0 ? eventData[0].id : null
-            );
+                setTemplates(mapApiTemplates(templateData));
+                setEvents(eventData);
+                setSelectedEventId(
+                    eventData.length > 0 ? eventData[0].id : null
+                );
 
-            if (eventData.length === 0) {
-                setError("No events found.");
+                if (eventData.length === 0) {
+                    setError("No events found.");
+                }
+            } catch (error) {
+                console.error("Failed to load notification template data:", error);
+                setError(
+                    getErrorMessage(
+                        error,
+                        "Failed to load notification templates."
+                    )
+                );
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Failed to load notification template data:", error);
-            setError(
-                getErrorMessage(
-                    error,
-                    "Failed to load notification templates."
-                )
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
 
-    void loadInitialData();
-}, []);
+        void loadInitialData();
+    }, []);
 
     const refreshTemplates = async () => {
         const data = await getTemplates();
@@ -217,9 +200,7 @@ function Templates() {
                   ? template.sms
                   : template.email;
 
-        if (channelTemplate.id === null) {
-            return;
-        }
+        if (channelTemplate.id === null) return;
 
         setEditingId(channelTemplate.id);
         setEditingChannel(channel);
@@ -304,7 +285,9 @@ function Templates() {
                 }
 
                 const results = await Promise.allSettled(requests);
-                const failed = results.filter((result) => result.status === "rejected");
+                const failed = results.filter(
+                    (result) => result.status === "rejected"
+                );
 
                 await refreshTemplates();
 
@@ -335,16 +318,16 @@ function Templates() {
             setEmailMessage("");
         } catch (error) {
             console.error("Failed to save template:", error);
-            setError(getErrorMessage(error, "Failed to save notification template."));
+            setError(
+                getErrorMessage(error, "Failed to save notification template.")
+            );
         } finally {
             setSaving(false);
         }
     };
 
     const handleDeleteTemplate = async () => {
-        if (deleteTarget === null || selectedTemplate === null) {
-            return;
-        }
+        if (deleteTarget === null || selectedTemplate === null) return;
 
         const channelTemplate =
             deleteTarget.channel === "whatsapp"
@@ -361,12 +344,15 @@ function Templates() {
         try {
             setSaving(true);
             setError("");
+
             await deleteTemplateApi(channelTemplate.id);
             await refreshTemplates();
             setDeleteTarget(null);
         } catch (error) {
             console.error("Failed to delete template:", error);
-            setError(getErrorMessage(error, "Failed to delete notification template."));
+            setError(
+                getErrorMessage(error, "Failed to delete notification template.")
+            );
         } finally {
             setSaving(false);
         }
@@ -409,7 +395,10 @@ function Templates() {
                     <div className="page-header">
                         <div>
                             <h1>Notification Templates</h1>
-                            <p>Configure notification templates for each event and channel.</p>
+                            <p>
+                                Configure notification templates for each event and
+                                channel.
+                            </p>
                         </div>
 
                         <button
@@ -445,7 +434,10 @@ function Templates() {
 
                             {!selectedTemplate ? (
                                 <div className="content-card">
-                                    <p>No notification template configured for this event.</p>
+                                    <p>
+                                        No notification template configured for this
+                                        event.
+                                    </p>
                                 </div>
                             ) : (
                                 <>
@@ -463,7 +455,10 @@ function Templates() {
                                                             className="template-icon-button"
                                                             title="Edit WhatsApp template"
                                                             onClick={() =>
-                                                                openEditForm(selectedTemplate, "whatsapp")
+                                                                openEditForm(
+                                                                    selectedTemplate,
+                                                                    "whatsapp"
+                                                                )
                                                             }
                                                         >
                                                             <Pencil size={16} />
@@ -473,7 +468,9 @@ function Templates() {
                                                             className="template-icon-button"
                                                             title="Delete WhatsApp template"
                                                             onClick={() =>
-                                                                setDeleteTarget({ channel: "whatsapp" })
+                                                                setDeleteTarget({
+                                                                    channel: "whatsapp",
+                                                                })
                                                             }
                                                         >
                                                             <Trash2 size={16} />
@@ -483,7 +480,9 @@ function Templates() {
                                                 <div className="template-field">
                                                     <label>Message</label>
                                                     <textarea
-                                                        value={selectedTemplate.whatsapp.message}
+                                                        value={
+                                                            selectedTemplate.whatsapp.message
+                                                        }
                                                         readOnly
                                                         rows={6}
                                                     />
@@ -504,7 +503,10 @@ function Templates() {
                                                             className="template-icon-button"
                                                             title="Edit SMS template"
                                                             onClick={() =>
-                                                                openEditForm(selectedTemplate, "sms")
+                                                                openEditForm(
+                                                                    selectedTemplate,
+                                                                    "sms"
+                                                                )
                                                             }
                                                         >
                                                             <Pencil size={16} />
@@ -514,7 +516,9 @@ function Templates() {
                                                             className="template-icon-button"
                                                             title="Delete SMS template"
                                                             onClick={() =>
-                                                                setDeleteTarget({ channel: "sms" })
+                                                                setDeleteTarget({
+                                                                    channel: "sms",
+                                                                })
                                                             }
                                                         >
                                                             <Trash2 size={16} />
@@ -545,7 +549,10 @@ function Templates() {
                                                             className="template-icon-button"
                                                             title="Edit Email template"
                                                             onClick={() =>
-                                                                openEditForm(selectedTemplate, "email")
+                                                                openEditForm(
+                                                                    selectedTemplate,
+                                                                    "email"
+                                                                )
                                                             }
                                                         >
                                                             <Pencil size={16} />
@@ -555,7 +562,9 @@ function Templates() {
                                                             className="template-icon-button"
                                                             title="Delete Email template"
                                                             onClick={() =>
-                                                                setDeleteTarget({ channel: "email" })
+                                                                setDeleteTarget({
+                                                                    channel: "email",
+                                                                })
                                                             }
                                                         >
                                                             <Trash2 size={16} />
@@ -586,8 +595,9 @@ function Templates() {
                                         <div>
                                             <h2>Available Variables</h2>
                                             <p>
-                                                These variables will be replaced with actual values when
-                                                the notification is sent.
+                                                These variables will be replaced with
+                                                actual values when the notification is
+                                                sent.
                                             </p>
                                         </div>
                                         <div className="template-variables">
@@ -609,7 +619,9 @@ function Templates() {
                         <div>
                             <h1>
                                 {editingId !== null
-                                    ? `Edit ${getChannelName(editingChannel as Channel)} Template`
+                                    ? `Edit ${getChannelName(
+                                          editingChannel as Channel
+                                      )} Template`
                                     : "Add Notification Template"}
                             </h1>
                             <p>Configure notification templates for different channels.</p>
@@ -633,12 +645,15 @@ function Templates() {
                             </select>
                         </div>
 
-                        {(editingChannel === null || editingChannel === "whatsapp") && (
+                        {(editingChannel === null ||
+                            editingChannel === "whatsapp") && (
                             <div className="template-field">
                                 <label>WhatsApp Message</label>
                                 <textarea
                                     value={whatsappMessage}
-                                    onChange={(event) => setWhatsappMessage(event.target.value)}
+                                    onChange={(event) =>
+                                        setWhatsappMessage(event.target.value)
+                                    }
                                     rows={5}
                                     placeholder="Enter WhatsApp message"
                                 />
@@ -650,21 +665,26 @@ function Templates() {
                                 <label>SMS Message</label>
                                 <textarea
                                     value={smsMessage}
-                                    onChange={(event) => setSmsMessage(event.target.value)}
+                                    onChange={(event) =>
+                                        setSmsMessage(event.target.value)
+                                    }
                                     rows={5}
                                     placeholder="Enter SMS message"
                                 />
                             </div>
                         )}
 
-                        {(editingChannel === null || editingChannel === "email") && (
+                        {(editingChannel === null ||
+                            editingChannel === "email") && (
                             <>
                                 <div className="template-field">
                                     <label>Email Subject</label>
                                     <input
                                         type="text"
                                         value={emailSubject}
-                                        onChange={(event) => setEmailSubject(event.target.value)}
+                                        onChange={(event) =>
+                                            setEmailSubject(event.target.value)
+                                        }
                                         placeholder="Enter email subject"
                                     />
                                 </div>
@@ -672,7 +692,9 @@ function Templates() {
                                     <label>Email Message</label>
                                     <textarea
                                         value={emailMessage}
-                                        onChange={(event) => setEmailMessage(event.target.value)}
+                                        onChange={(event) =>
+                                            setEmailMessage(event.target.value)
+                                        }
                                         rows={7}
                                         placeholder="Enter email message"
                                     />
@@ -710,7 +732,9 @@ function Templates() {
                 <div className="delete-confirmation">
                     <div className="delete-confirmation-card">
                         <div className="delete-confirmation-header">
-                            <h2>Delete {getChannelName(deleteTarget.channel)} Template</h2>
+                            <h2>
+                                Delete {getChannelName(deleteTarget.channel)} Template
+                            </h2>
                             <p>
                                 Are you sure you want to delete this{" "}
                                 {getChannelName(deleteTarget.channel)} template?

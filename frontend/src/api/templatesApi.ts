@@ -42,7 +42,13 @@ const request = async <T>(
         return undefined as T;
     }
 
-    return response.json() as Promise<T>;
+    const contentType = response.headers.get("content-type");
+
+    if (contentType?.includes("application/json")) {
+        return response.json() as Promise<T>;
+    }
+
+    return undefined as T;
 };
 
 export const getTemplates = (): Promise<Template[]> => {
